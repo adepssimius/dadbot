@@ -1,0 +1,16 @@
+{
+  "name": "dadbot",
+  "version": "1.0.0",
+  "description": "a discord bot for inter-server communication, lfg, and clan management",
+  "main": "index.js",
+  "repository": "git@github.com:adepssimius/dadbot.git",
+  "author": "Ben Penkacik <ben.penkacik@gmail.com>",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "dependencies": {
+    "discord.js": "^12.5.1",
+    "dotenv": "^8.2.0",
+    "sqlite3": "^5.0.1"
+  }
+}
