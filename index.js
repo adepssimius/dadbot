@@ -1,12 +1,12 @@
 import dotenv from 'dotenv';
 import Discord from 'discord.js';
-import DatabaseService from './lib/DatabaseService';
+import DatabaseService from './lib/DatabaseService.js';
 
 // set up dotenv
 dotenv.config();
 
 // get the db going
-const dbService = new DatabaseService;
+const dbService = new DatabaseService();
 await dbService.connect();
 
 const discordClient = new Discord.Client();
