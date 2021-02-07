@@ -22,7 +22,92 @@ discordClient.once('ready', () => {
     console.log('ready');
 });
 
+//
+// Constants
+//
+
 const bot_id = '807375870574329907';
+const prefix = '%';
+
+//
+// Functions
+//
+
+async function http_post(url, data) {
+    return await axios({
+        method: 'post',
+        url: url,
+        data: data
+    });
+}
+
+//
+// Prototype Classes
+//
+
+class SyncGroup {
+    constructor(name) {
+		this.name = name;
+        this.channels = [];
+    }
+	
+	addChannel(channel) {
+        let syncChannel = new SyncChannel(channel, this.name);
+        this.channels.push(syncChannel);
+        return syncChannel;
+    }
+    
+    syncMessage(message) {
+        let message_to_send = {
+            content: message.content,
+            username: message.author.username,
+            avatar_url: message.author.displayAvatarURL()
+        };
+        
+        console.log('Outgoing Message:');
+        console.log(message_to_send);
+        console.log();
+
+        this.channels.forEach(channel => channel.syncMessage(message, message_to_send));
+    }
+}
+
+class SyncChannel {
+    constructor(channel, syncGroupName) {
+        this.channel       = channel;
+        this.syncGroupName = syncGroupName;
+        this.webhook       = null;
+	}
+    
+    async createWebhook() {
+        try {
+            this.webhook = await this.channel.createWebhook('sync - ' + this.syncGroupName);
+            
+            console.log('New Webhoook:');
+            console.log(this.webhook);
+            console.log();
+        
+        } catch (error) {
+            this.channel.send('Error creating webhook, check bot permissions');
+            
+            console.log('Error while creating webhook:');
+            console.log(error);
+            console.log();
+        }
+    }
+    
+    syncMessage(message, message_to_send) {
+        if (message.channel.id != this.channel.id) {
+            http_post(this.webhook.url, message_to_send);
+        }
+    }
+}
+
+//
+// Manually build the Syncronization Group
+//
+
+/*
 
 // Team Hydra #bunzo-testing-1
 const channel_1_id = '807451469422919681';
@@ -47,17 +132,13 @@ const channel_4_id = '808038709986852884';
 const hook_4_id    = '808041197993984041';
 const hook_4_token = 'xGxDRf5tR-dhXrKs5JqWbXuUYLYEwlQiq43V7FzPyoLLvdXVa-gGlZF5zWmVB5z8Fc7D';
 const hook_4_url   = 'https://discord.com/api/webhooks/' + hook_4_id + '/' + hook_4_token;
+*/
 
-async function http_post(url, data) {
-    return await axios({
-        method: 'post',
-        url: url,
-        data: data
-    });
-}
+
+let syncGroup = null;
 
 discordClient.on('message', async message => {
-    //if (message.author.id == bot_id) {
+    // Ignore messages from the bot
     if (message.author.bot) {
         return
     }
@@ -66,47 +147,40 @@ discordClient.on('message', async message => {
     console.log(message);
     console.log();
     
-    let message_to_send = {
-        content: message.content,
-        username: message.author.username,
-        avatar_url: message.author.displayAvatarURL()
-    };
-    
-    console.log('Outgoing Message:');
-    console.log(message_to_send);
-    console.log();
-
-    let result = null;
-    
-    switch (message.channel.id) {
-        case channel_1_id: 
-            result = await http_post(hook_2_url, message_to_send);
-            http_post(hook_3_url, message_to_send);
-            http_post(hook_4_url, message_to_send);
-            break;
+    if (message.content.startsWith(prefix)) {
+        const args = message.content.slice(prefix.length).trim().split(/ +/);
+        const command = args.shift().toLowerCase();
         
-        case channel_2_id: 
-            result = await http_post(hook_1_url, message_to_send);
-            http_post(hook_3_url, message_to_send);
-            http_post(hook_4_url, message_to_send);
-            break;
+        if (command === 'ping') {
+            message.channel.send('pong');
         
-        case channel_3_id: 
-            result = await http_post(hook_1_url, message_to_send);
-            http_post(hook_2_url, message_to_send);
-            http_post(hook_4_url, message_to_send);
-            break;
+        } else if (command === 'create-group' || command === 'cg') {
+		    syncGroup = new SyncGroup(args[0]);
+            
+			message.channel.send('Created sync group: ' + args[0]);
+            
+            console.log('Sync Group:');
+            console.log(syncGroup);
+            console.log();
         
-        case channel_4_id: 
-            result = await http_post(hook_1_url, message_to_send);
-            http_post(hook_2_url, message_to_send);
-            http_post(hook_3_url, message_to_send);
-            break;
+        } else if (command === 'add-channel' || command === 'ac') {
+            let syncChannel = syncGroup.addChannel(message.channel);
+            syncChannel.createWebhook();
+            
+            message.channel.send('Added channel to sync group: ' + syncGroup.name);
+            
+            console.log('Sync Channel:');
+            console.log(syncChannel);
+            console.log();
+        
+        }
+        
+        return;
     }
-   
-    console.log('Webhook Response:');
-    console.log(result);
-    console.log();
+    
+    // Otherwise, attempt to sync the message
+    syncGroup.syncMessage(message);
+
 });
 
 /*
