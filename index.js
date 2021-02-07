@@ -66,9 +66,7 @@ discordClient.on('message', message => {
     };
     */
 
-    let message_to_send = {
-        content: message.content
-    };
+    let message_to_send = message.content;
     
     let options = {
         username: message.author.username,
@@ -83,31 +81,37 @@ discordClient.on('message', message => {
     console.log(options);
     console.log();
     
+    let response = null;
+    
     switch (message.channel.id) {
         case channel_1_id: 
-            hook_2.send(message_to_send.content, options);
-            hook_3.send(message_to_send.content, options);
-            hook_4.send(message_to_send.content, options);
+            response = hook_2.send(message_to_send, options);
+            hook_3.send(message_to_send, options);
+            hook_4.send(message_to_send, options);
             break;
         
         case channel_2_id: 
-            hook_1.send(message_to_send.content, options);
-            hook_3.send(message_to_send.content, options);
-            hook_4.send(message_to_send.content, options);
+            response = hook_1.send(message_to_send, options);
+            hook_3.send(message_to_send, options);
+            hook_4.send(message_to_send, options);
             break;
         
         case channel_3_id: 
-            hook_1.send(message_to_send.content, options);
-            hook_2.send(message_to_send.content, options);
-            hook_4.send(message_to_send.content, options);
+            response = hook_1.send(message_to_send, options);
+            hook_2.send(message_to_send, options);
+            hook_4.send(message_to_send, options);
             break;
         
         case channel_4_id: 
-            hook_1.send(message_to_send.content, options);
-            hook_2.send(message_to_send.content, options);
-            hook_3.send(message_to_send.content, options);
+            response = hook_1.send(message_to_send, options);
+            hook_2.send(message_to_send, options);
+            hook_3.send(message_to_send, options);
             break;
     }
+    
+    console.log('Webhook Response:');
+    console.log(response);
+    console.log();
 });
 
 /*
