@@ -1,7 +1,15 @@
-import dotenv from 'dotenv';
+
+// Verify the node version is 14.0.0 or above
+if (Number(process.version.slice(1).split(".")[0]) < 14)
+    throw new Error('Node 14.0.0 or above is required. Update Node on your system.');
+
+// Load the discord.js library
 import Discord from 'discord.js';
+
+// Load other libraries
+import axios   from 'axios';
+import dotenv  from 'dotenv';
 import sqlite3 from 'sqlite3';
-import axios from 'axios';
 
 // set up dotenv
 dotenv.config();
