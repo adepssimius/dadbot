@@ -123,11 +123,11 @@ class SyncGroup {
         
         // When lookupValue is the channel ID
         if (typeof lookupValue == 'string') {
-            return this.syncChannels[lookupValue];
+            return this.syncChannels.get(lookupValue);
         
         // When lookupValue is a channel
         } else {
-            return this.syncChannels[lookupValue.id];
+            return this.syncChannels.get(lookupValue.id);
         }
         
         //for (let x = 0; x < this.syncChannels.length; x++) {
@@ -141,7 +141,7 @@ class SyncGroup {
 
 	addChannel(channel) {
         let syncChannel = new SyncChannel(channel, this.name);
-        this.syncChannels[channel.id] = syncChannel;
+        this.syncChannels.set(channel.id, syncChannel);
         return syncChannel;
     }
     
@@ -164,9 +164,8 @@ class SyncGroup {
         // console.log();
         
         //for (let syncChannel of this.syncChannels.values()) {
-        for (let channelID in this.syncChannels) {
+        for (let [channelID, syncChannel] of this.syncChannels) {
             if (message.channel.id != channelID) {
-                let syncChannel = this.syncChannels[channelID];
                 let result = await syncChannel.sendMessage(message, message_to_send);
                 
                 // console.log('Result:');
