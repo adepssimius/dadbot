@@ -159,9 +159,9 @@ class SyncGroup {
         // Create a syncMessage record for this message
         let syncMessage = new SyncMessage(message.id, message.channel.id, message.content);
         
-        console.log('this.syncChannels');
-        console.log(this.syncChannels);
-        console.log();
+        // console.log('this.syncChannels');
+        // console.log(this.syncChannels);
+        // console.log();
         
         //for (let syncChannel of this.syncChannels.values()) {
         for (let channelID in this.syncChannels) {
@@ -233,6 +233,8 @@ class SyncGroup {
             
             let result = await syncChannel.deleteMessage(childSyncMessage.messageID);
         }
+        
+        this.syncMessageQueue.delete(message.id);
     }
 }
 
@@ -318,25 +320,48 @@ class SyncChannel {
 }
 
 //
-// SyncGroup and SyncChannel classes
+// SyncMessageQueue and SyncMessage classes
 //
 
 class SyncMessageQueue {
-    constructor(size = 50) {
-        this.size = 50;
-        this.queue = new Map();
+    constructor(maxQueueSize = 50) {
+        this.maxQueueSize = maxQueueSize;
+        this.queue        = new Map();
     }
     
     add(syncMessage) {
-        this.queue[syncMessage.messageID] = syncMessage;
+        this.queue.set(syncMessage.messageID, syncMessage);
+
+        console.log('typeof this.queue');
+        console.log(typeof this.queue);
+        console.log();
         
-        //while (this.queue.length > this.size) {
-        //    this.queue.shift();
-        //}
+
+        while (this.queue.size > this.maxQueueSize) {
+            let queueSize          = this.queue.size;
+            let firstSyncMessageID = this.queue.keys().next().value;
+            let firstSyncMessage   = this.get(firstSyncMessageID);
+            
+            console.log('queueSize: ' + queueSize);
+            console.log('firstSyncMessageID: ' + firstSyncMessageID);
+            console.log('firstSyncMessage:');
+            console.log(firstSyncMessage);
+            console.log();
+            
+            this.queue.delete(firstSyncMessageID);
+            
+            break;
+        }
+        
+        console.log();
     }
     
     get(messageID) {
-        return this.queue[messageID];
+        return this.queue.get(messageID);
+    }
+    
+    delete(messageID) {
+        return this.queue.delete(messageID);
     }
 }
 
@@ -349,9 +374,9 @@ class SyncMessage {
 	}
 	
 	addChildMessage(childSyncMessage) {
-	    console.log('addChildMessage : childSyncMessage:');
-	    console.log(childSyncMessage);
-	    console.log();
+	   // console.log('addChildMessage : childSyncMessage:');
+	   // console.log(childSyncMessage);
+	   // console.log();
 	    
 	    this.childSyncMessages.push(childSyncMessage);
 	}
