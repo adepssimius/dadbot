@@ -15,12 +15,8 @@ let db = new sqlite3.Database('./db/dadbot.db', (err) => {
     console.log('Connected to the dadabase.')
 });
 
-const discordClient = new Discord.Client();
-discordClient.login(process.env.BOT_TOKEN);
-
-discordClient.once('ready', () => {
-    console.log('ready');
-});
+const client = new Discord.Client();
+await client.login(process.env.BOT_TOKEN);
 
 //
 // Constants
@@ -34,11 +30,53 @@ const prefix = '%';
 //
 
 async function http_post(url, data) {
-    return await axios({
-        method: 'post',
-        url: url,
-        data: data
-    });
+    let result =
+        await axios({
+            method: 'post',
+            url: url,
+            data: data
+        });
+    
+    /*
+    console.log('Result:');
+    console.log(result);
+    console.log();
+    */
+    
+    return result;
+}
+
+async function http_patch(url, data) {
+    let result =
+        await axios({
+            method: 'patch',
+            url: url,
+            data: data
+        });
+    
+    /*
+    console.log('Result:');
+    console.log(result);
+    console.log();
+    */
+    
+    return result;
+}
+
+async function http_delete(url) {
+    let result =
+        await axios({
+            method: 'delete',
+            url: url
+        });
+    
+    /*
+    console.log('Result:');
+    console.log(result);
+    console.log();
+    */
+    
+    return result;
 }
 
 //
@@ -48,16 +86,56 @@ async function http_post(url, data) {
 class SyncGroup {
     constructor(name) {
 		this.name = name;
-        this.channels = [];
+        this.syncChannels = [];
     }
 	
+    static lookup(lookupValue) {
+        // Lookup by sync group name
+        if (typeof lookupValue == 'string') {
+            for (let x = 0; x < syncGroups.length; x++) {
+                if (syncGroups[x].name == lookupValue) {
+                    return syncGroups[x];
+                }
+            }
+            
+            return;
+        
+        // Lookup by channel within a sync group
+        } else {
+            console.log('Searching by channel for channel id = ' + lookupValue.id);
+            
+            for (let x = 0; x < syncGroups.length; x++) {
+                let syncGroup = syncGroups[x];
+                let channel = syncGroups[x].lookup(lookupValue);
+                
+                if (channel != null) {
+                    return syncGroups[x];
+                }
+            }
+            
+            return;
+        }
+    }
+    
+    lookup(channel) {
+        console.log('Searching sync group: ' + this.name);
+        
+        for (let x = 0; x < this.syncChannels.length; x++) {
+            console.log('Checking channel with id = ' + this.syncChannels[x].channel.id);
+            
+            if (channel.id == this.syncChannels[x].channel.id) {
+                return this.syncChannels[x];
+            }
+        }
+    }
+
 	addChannel(channel) {
         let syncChannel = new SyncChannel(channel, this.name);
-        this.channels.push(syncChannel);
+        this.syncChannels.push(syncChannel);
         return syncChannel;
     }
     
-    syncMessage(message) {
+    async syncMessage(message) {
         let message_to_send = {
             content: message.content,
             username: message.author.username,
@@ -68,9 +146,49 @@ class SyncGroup {
         console.log(message_to_send);
         console.log();
 
-        this.channels.forEach(channel => channel.syncMessage(message, message_to_send));
+        this.syncChannels.forEach(async syncChannel => {
+            if (message.channel.id != syncChannel.channel.id) {
+                let result = await syncChannel.syncMessage(message, message_to_send);
+                
+                console.log('Result:');
+                console.log(result);
+                console.log();
+            }
+        });
+    }
+    
+    async editMessage(channel, messageID, messageContent) {
+        let message_to_send = { content: messageContent };
+        
+        this.syncChannels.forEach(async syncChannel => {
+            if (channel.id == syncChannel.channel.id) {
+                let result = await syncChannel.editMessage(messageID, message_to_send);
+                
+                /*
+                console.log('Result:');
+                console.log(result);
+                console.log();
+                */
+            }
+        });
+    }
+    
+    async deleteMessage(channel, messageID) {
+        this.syncChannels.forEach(async syncChannel => {
+            if (channel.id == syncChannel.channel.id) {
+                let result = await syncChannel.deleteMessage(messageID);
+                
+                /*
+                console.log('Result:');
+                console.log(result);
+                console.log();
+                */
+            }
+        });
     }
 }
+
+let syncGroups = [];
 
 class SyncChannel {
     constructor(channel, syncGroupName) {
@@ -96,48 +214,58 @@ class SyncChannel {
         }
     }
     
-    syncMessage(message, message_to_send) {
-        if (message.channel.id != this.channel.id) {
-            http_post(this.webhook.url, message_to_send);
-        }
+    async setWebhook(webhook) {
+        this.webhook = webhook;
+    }
+    
+    getWebhookEditURL(messageID) {
+        return this.webhook.url + '/messages/' + messageID;
+    }
+    
+    getWebhookDeleteURL(messageID) {
+        return this.webhook.url + '/messages/' + messageID;
+    }
+    
+    async syncMessage(message, message_to_send) {
+        let result = await http_post(this.webhook.url, message_to_send);
+        
+        /*
+        console.log('Result:');
+        console.log(result);
+        console.log();
+        */
+        
+        return result;
+    }
+    
+    async editMessage(messageID, message_to_send) {
+        console.log('Edit URL = ' + this.getWebhookEditURL(messageID));
+        let result = await http_patch(this.getWebhookEditURL(messageID), message_to_send);
+        
+        /*
+        console.log('Result:');
+        console.log(result);
+        console.log();
+        */
+        
+        return result;
+    }
+    
+    async deleteMessage(messageID) {
+        console.log('Delete URL = ' + this.getWebhookDeleteURL(messageID));
+        let result = await http_delete(this.getWebhookDeleteURL(messageID));
+        
+        /*
+        console.log('Result:');
+        console.log(result);
+        console.log();
+        */
+        
+        return result;
     }
 }
 
-//
-// Manually build the Syncronization Group
-//
-
-/*
-
-// Team Hydra #bunzo-testing-1
-const channel_1_id = '807451469422919681';
-const hook_1_id    = '808011103262081084';
-const hook_1_token = 'XAtR40YAiHA4ifP476VzAvIdfF_mByyEO19Ih39uVissr7seJ1RcYn0WtEfa-DIcfDVJ';
-const hook_1_url   = 'https://discord.com/api/webhooks/' + hook_1_id + '/' + hook_1_token;
-
-// Team Hydra #bunzo-testing-1
-const channel_2_id = '808011371802656770';
-const hook_2_id    = '808011390450663475';
-const hook_2_token = 'nYgONqbU9HvpFHrGeqHPf4KW1oUz5ryG8FKmNJTIGRCzGKZ5jC8tx6YSMWDzEegnLrqr';
-const hook_2_url   = 'https://discord.com/api/webhooks/' + hook_2_id + '/' + hook_2_token;
-
-// Team Hydra #bunzo-testing-1
-const channel_3_id = '808038005611692072';
-const hook_3_id    = '808038095894085663';
-const hook_3_token = 'P0PilqzKWkFelaCXk3wTegW4WiZnfTHINltV0TE32A-I9XCeOu8SRT3YnVohOYQ6KA7A';
-const hook_3_url   = 'https://discord.com/api/webhooks/' + hook_3_id + '/' + hook_3_token;
-
-// Unown Guardians #bunzobot-testing
-const channel_4_id = '808038709986852884';
-const hook_4_id    = '808041197993984041';
-const hook_4_token = 'xGxDRf5tR-dhXrKs5JqWbXuUYLYEwlQiq43V7FzPyoLLvdXVa-gGlZF5zWmVB5z8Fc7D';
-const hook_4_url   = 'https://discord.com/api/webhooks/' + hook_4_id + '/' + hook_4_token;
-*/
-
-
-let syncGroup = null;
-
-discordClient.on('message', async message => {
+client.on('message', async message => {
     // Ignore messages from the bot
     if (message.author.bot) {
         return
@@ -155,15 +283,30 @@ discordClient.on('message', async message => {
             message.channel.send('pong');
         
         } else if (command === 'create-group' || command === 'cg') {
-		    syncGroup = new SyncGroup(args[0]);
+            let syncGroup = SyncGroup.lookup(args[0]);
             
-			message.channel.send('Created sync group: ' + args[0]);
+            if (syncGroup == null) {
+                let syncGroup = new SyncGroup(args[0]);
+                syncGroups.push(syncGroup);
+                
+			    message.channel.send('Created sync group: ' + args[0]);
+                
+                console.log('Sync Group:');
+                console.log(syncGroup);
+                console.log();
             
-            console.log('Sync Group:');
-            console.log(syncGroup);
-            console.log();
+            } else {
+                message.channel.send('Sync group already exists: ' + args[0]);
+            
+            }
         
         } else if (command === 'add-channel' || command === 'ac') {
+            let syncGroup = SyncGroup.lookup(args[0]);
+            
+            if (syncGroup == null) {
+                message.channel.send('Could not find sync group named: ' + args[0]);
+            }
+            
             let syncChannel = syncGroup.addChannel(message.channel);
             syncChannel.createWebhook();
             
@@ -173,24 +316,119 @@ discordClient.on('message', async message => {
             console.log(syncChannel);
             console.log();
         
+        } else if (command === 'show-group' || command == 'sg') {
+            let syncGroup = SyncGroup.lookup(args[0]);
+            
+            if (syncGroup == null) {
+                message.channel.send('Could not find sync group named: ' + args[0]);
+            
+            } else {
+                message.channel.send("Sync group '" + syncGroup.name + "' found with " + syncGroup.syncChannels.length + ' channel(s)');
+            
+            }
+        
+        } else if (command == 'edit-message' || command == 'em') {
+            let syncGroup = SyncGroup.lookup(message.channel);
+            
+             if (syncGroup != null) {
+                 syncGroup.editMessage(message.channel, args[0], 'Message edited out of existence');
+             }
+        
+        } else if (command == 'delete-message' || command == 'dm') {
+            let syncGroup = SyncGroup.lookup(message.channel);
+           
+             if (syncGroup != null) {
+                 syncGroup.deleteMessage(message.channel, args[0]);
+             }
+        
+        } else {
+            message.channel.send('Command not recognized: ' + command);
+         
         }
         
         return;
     }
     
+    //
     // Otherwise, attempt to sync the message
-    syncGroup.syncMessage(message);
+    //
+
+    // See if we can find a sync group for this message's channel
+    let syncGroup = SyncGroup.lookup(message.channel);
+    
+    if (syncGroup != null) {
+        console.log('Found sync group:');
+        console.log(syncGroup);
+        console.log();
+
+        syncGroup.syncMessage(message);
+    } else {
+        console.log('Could not find sync group for channel');
+        console.log();
+    }
+
+});
+
+client.once('ready', () => {
+    console.log('ready');
+
+    //
+    // Load existing sync groups and channels from Disord itself
+    //
+    
+    console.log('Showing all guilds');
+    
+    client.guilds.cache.forEach(async guild => {
+        console.log('Searching discord: ' + guild.nam + ' [' + guild.id + ']');
+        
+        guild.channels.cache.forEach(async channel => {
+            console.log('  -> Searching channel: #' + channel.name + ' [' + channel.id + ']'); 
+              
+            if (channel.type == 'text') {
+                let webhooks = await channel.fetchWebhooks();
+                
+                if (webhooks != null & webhooks.size > 0) {
+                    //console.log('Webhooks: size = ' + webhooks.size);
+                    //console.log(webhooks);
+                    
+                    for (let webhook of webhooks.values()) {
+                        //console.log('  -> Webhook Name = ' + webhook.name);
+                        //console.log(webhook);
+                        
+                        if (webhook.name.startsWith('sync - ')) {
+                            let syncGroupName = webhook.name.substring(webhook.name.indexOf('-') + 1).trim();
+                            console.log('Found sync group: ' + syncGroupName);
+
+                            let syncGroup = SyncGroup.lookup(syncGroupName);
+                            
+                            if (syncGroup == null) {
+                                syncGroup = new SyncGroup(syncGroupName);
+                                syncGroups.push(syncGroup);
+                            }
+                            
+                            let syncChannel = syncGroup.addChannel(channel);
+                            syncChannel.setWebhook(webhook);
+                        }
+                    }
+                    
+                    //console.log();
+                };
+            }
+        });
+        
+        console.log();
+    });
 
 });
 
 /*
-discordClient.on('message', message => {
+client.on('message', message => {
     if (message.content == 'test message') {
         message.channel.send('hello world');
     }
 });
 
-discordClient.on('message', message => {
+client.on('message', message => {
     let query = 'SELECT response FROM jokes WHERE call = ?';
     db.get(query, [message], (err, row) => {
         if (row) {
@@ -199,19 +437,19 @@ discordClient.on('message', message => {
     });
 });
 
-discordClient.on('message', message => {
+client.on('message', message => {
     if (message.content == 'dadbot channel id') {
         message.channel.send(message.channel.id);
     }
 });
 
-discordClient.on('message', message => {
+client.on('message', message => {
     if (message.content == 'dadbot guild id') {
         message.channel.send(message.guild.id);
     }
 });
 
-discordClient.on('message', message => {
+client.on('message', message => {
     console.log(message.content);
     if (message.content.substring(0,4) == 'sync') {
         let syncType = message.content.substring(5);
@@ -226,7 +464,7 @@ discordClient.on('message', message => {
     }
 });
 
-discordClient.on('message', message => {
+client.on('message', message => {
     if (!message.author.bot) {
         let query = 'SELECT sync_name, channel_id FROM guilds_channels_types WHERE channel_id = ?';
         db.get(query, [message.channel.id], async (err, result) => {
@@ -241,7 +479,7 @@ discordClient.on('message', message => {
                         console.error(err);
                     }
                     console.log(result.channel_id);
-                    sendMessageToChannel(discordClient, result.channel_id, message);
+                    sendMessageToChannel(client, result.channel_id, message);
                 });
             }
 
