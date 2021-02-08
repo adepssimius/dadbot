@@ -348,7 +348,7 @@ class SyncMessageQueue {
             console.log(firstSyncMessage);
             console.log();
             
-            this.queue.delete(firstSyncMessageID);
+            this.delete(firstSyncMessageID);
             
             break;
         }
