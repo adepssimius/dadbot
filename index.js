@@ -1,21 +1,22 @@
 
+// Import external modules
+const Discord = require('discord.js');
+const dotenv  = require('dotenv');
+const sqlite3 = require('sqlite3');
+
+// Include class modules
+const SyncGroupManager = require('./lib/SyncGroupManager');
+const SyncGroup        = require('./lib/SyncGroup');
+
 // Verify the node version is 14.0.0 or above
 if (Number(process.version.slice(1).split(".")[0]) < 14)
     throw new Error('Node 14.0.0 or above is required. Update Node on your system.');
-
-// Load the discord.js library
-import Discord from 'discord.js';
-
-// Load other libraries
-import axios   from 'axios';
-import dotenv  from 'dotenv';
-import sqlite3 from 'sqlite3';
 
 // set up dotenv
 dotenv.config();
 
 // get the db going
-let db = new sqlite3.Database('./db/dadbot.db', (err) => {
+let db = new sqlite3.Database('./db/ninkasi.db', (err) => {
     if (err) {
         console.error(err.message);
     }
@@ -34,364 +35,14 @@ const bot_id = '807375870574329907';
 const prefix = '%';
 
 //
-// Functions
+// Global variables
 //
 
-async function http_post(url, data) {
-    let result =
-        await axios({
-            method: 'post',
-            url: url,
-            data: data
-        });
-    
-    /*
-    console.log('Result:');
-    console.log(result);
-    console.log();
-    */
-    
-    return result;
-}
-
-async function http_patch(url, data) {
-    let result =
-        await axios({
-            method: 'patch',
-            url: url,
-            data: data
-        });
-    
-    /*
-    console.log('Result:');
-    console.log(result);
-    console.log();
-    */
-    
-    return result;
-}
-
-async function http_delete(url) {
-    let result =
-        await axios({
-            method: 'delete',
-            url: url
-        });
-    
-    /*
-    console.log('Result:');
-    console.log(result);
-    console.log();
-    */
-    
-    return result;
-}
-
-//
-// SyncGroup and SyncChannel classes
-//
-
-class SyncGroup {
-    constructor(name) {
-		this.name = name;
-        this.syncChannels = new Map();
-        this.syncMessageQueue = new SyncMessageQueue();
-    }
-	
-    static lookup(lookupValue) {
-        // Lookup by sync group name
-        if (typeof lookupValue == 'string') {
-            for (let x = 0; x < allSyncGroups.length; x++) {
-                if (allSyncGroups[x].name == lookupValue) {
-                    return allSyncGroups[x];
-                }
-            }
-            
-            return;
-        
-        // Lookup by channel within a sync group
-        } else {
-            console.log('Searching by channel for channel id = ' + lookupValue.id);
-            
-            for (let x = 0; x < allSyncGroups.length; x++) {
-                let syncGroup = allSyncGroups[x];
-                let channel = syncGroup.lookup(lookupValue);
-                
-                if (channel != null) {
-                    return syncGroup;
-                }
-            }
-            
-            return;
-        }
-    }
-    
-    lookup(lookupValue) {
-        console.log('Searching sync group: ' + this.name);
-        
-        // When lookupValue is the channel ID
-        if (typeof lookupValue == 'string') {
-            return this.syncChannels.get(lookupValue);
-        
-        // When lookupValue is a channel
-        } else {
-            return this.syncChannels.get(lookupValue.id);
-        }
-        
-        //for (let x = 0; x < this.syncChannels.length; x++) {
-        //    console.log('Checking channel with id = ' + this.syncChannels[x].channel.id);
-        //    
-        //    if (channel.id == this.syncChannels[x].channel.id) {
-        //        return this.syncChannels[x];
-        //    }
-        //}
-    }
-
-	addChannel(channel) {
-        let syncChannel = new SyncChannel(channel, this.name);
-        this.syncChannels.set(channel.id, syncChannel);
-        return syncChannel;
-    }
-    
-    async sendMessage(message) {
-        let message_to_send = {
-            content: message.content,
-            username: message.author.username,
-            avatar_url: message.author.displayAvatarURL()
-        };
-        
-        console.log('Outgoing Message:');
-        console.log(message_to_send);
-        console.log();
-        
-        // Create a syncMessage record for this message
-        let syncMessage = new SyncMessage(message.id, message.channel.id, message.content);
-        
-        // console.log('this.syncChannels');
-        // console.log(this.syncChannels);
-        // console.log();
-        
-        //for (let syncChannel of this.syncChannels.values()) {
-        for (let [channelID, syncChannel] of this.syncChannels) {
-            if (message.channel.id != channelID) {
-                let result = await syncChannel.sendMessage(message, message_to_send);
-                
-                // console.log('Result:');
-                // console.log(result);
-                // console.log();
-                
-                // console.log('Data:');
-                // console.log(result.data);
-                // console.log();
-                
-                let childSyncMessage = new SyncMessage(result.data.id, result.data.channel_id, result.content);
-                syncMessage.addChildMessage(childSyncMessage);
-            }
-        }
-    
-        this.syncMessageQueue.add(syncMessage);
-
-        console.log('Queue:');
-        console.log(this.syncMessageQueue);
-        console.log();
-    }
-    
-    async editMessage(newMessage) {
-        let message_to_send = { content: newMessage.content };
-        let syncMessage = this.syncMessageQueue.get(newMessage.id);
-        
-        // console.log('--------------------------------------------------------------------------------');
-        // console.log('New Message:');
-        // console.log(newMessage);
-        // console.log();
-        
-        // console.log('syncMessage:');
-        // console.log(syncMessage);
-        // console.log();
-        
-        for (let x = 0; x < syncMessage.childSyncMessages.length; x++) {
-            let childSyncMessage = syncMessage.childSyncMessages[x];
-            let syncChannel = this.lookup(childSyncMessage.channelID);
-            
-            // console.log('childSyncMessage:');
-            // console.log(childSyncMessage);
-            // console.log();
-            
-            // console.log('syncChannel:');
-            // console.log(syncChannel);
-            // console.log();
-            
-            let result = await syncChannel.editMessage(childSyncMessage.messageID, message_to_send);
-            
-            /*
-            console.log('Result:');
-            console.log(result);
-            console.log();
-            */
-        }
-    }
-    
-    async deleteMessage(message) {
-        let syncMessage = this.syncMessageQueue.get(message.id);
-        
-        for (let x = 0; x < syncMessage.childSyncMessages.length; x++) {
-            let childSyncMessage = syncMessage.childSyncMessages[x];
-            let syncChannel = this.lookup(childSyncMessage.channelID);
-            
-            let result = await syncChannel.deleteMessage(childSyncMessage.messageID);
-        }
-        
-        this.syncMessageQueue.delete(message.id);
-    }
-}
-
-let allSyncGroups = [];
-
-class SyncChannel {
-    constructor(channel, syncGroupName) {
-        this.channel       = channel;
-        this.syncGroupName = syncGroupName;
-        this.webhook       = null;
-	}
-    
-    async createWebhook() {
-        try {
-            this.webhook = await this.channel.createWebhook('sync - ' + this.syncGroupName);
-            
-            console.log('New Webhoook:');
-            console.log(this.webhook);
-            console.log();
-        
-        } catch (error) {
-            this.channel.send('Error creating webhook, check bot permissions');
-            
-            console.log('Error while creating webhook:');
-            console.log(error);
-            console.log();
-        }
-    }
-    
-    async setWebhook(webhook) {
-        this.webhook = webhook;
-    }
-    
-    getWebhookSendURL() {
-        return this.webhook.url + '?wait=true';
-    }
-    
-    getWebhookEditURL(messageID) {
-        return this.webhook.url + '/messages/' + messageID;
-    }
-    
-    getWebhookDeleteURL(messageID) {
-        return this.webhook.url + '/messages/' + messageID;
-    }
-    
-    async sendMessage(message, message_to_send) {
-        let result = await http_post(this.getWebhookSendURL(), message_to_send);
-        
-        /*
-        console.log('Result:');
-        console.log(result);
-        console.log();
-        */
-        
-        return result;
-    }
-    
-    async editMessage(messageID, message_to_send) {
-        console.log('Edit URL = ' + this.getWebhookEditURL(messageID));
-        let result = await http_patch(this.getWebhookEditURL(messageID), message_to_send);
-        
-        /*
-        console.log('Result:');
-        console.log(result);
-        console.log();
-        */
-        
-        return result;
-    }
-    
-    async deleteMessage(messageID) {
-        console.log('Delete URL = ' + this.getWebhookDeleteURL(messageID));
-        let result = await http_delete(this.getWebhookDeleteURL(messageID));
-        
-        /*
-        console.log('Result:');
-        console.log(result);
-        console.log();
-        */
-        
-        return result;
-    }
-}
-
-//
-// SyncMessageQueue and SyncMessage classes
-//
-
-class SyncMessageQueue {
-    constructor(maxQueueSize = 50) {
-        this.maxQueueSize = maxQueueSize;
-        this.queue        = new Map();
-    }
-    
-    add(syncMessage) {
-        this.queue.set(syncMessage.messageID, syncMessage);
-
-        console.log('typeof this.queue');
-        console.log(typeof this.queue);
-        console.log();
-        
-
-        while (this.queue.size > this.maxQueueSize) {
-            let queueSize          = this.queue.size;
-            let firstSyncMessageID = this.queue.keys().next().value;
-            let firstSyncMessage   = this.get(firstSyncMessageID);
-            
-            console.log('queueSize: ' + queueSize);
-            console.log('firstSyncMessageID: ' + firstSyncMessageID);
-            console.log('firstSyncMessage:');
-            console.log(firstSyncMessage);
-            console.log();
-            
-            this.delete(firstSyncMessageID);
-            
-            break;
-        }
-        
-        console.log();
-    }
-    
-    get(messageID) {
-        return this.queue.get(messageID);
-    }
-    
-    delete(messageID) {
-        return this.queue.delete(messageID);
-    }
-}
-
-class SyncMessage {
-    constructor(messageID, channelID, content) {
-        this.messageID = messageID;
-        this.channelID = channelID;
-        this.content   = content;
-        this.childSyncMessages = [];
-	}
-	
-	addChildMessage(childSyncMessage) {
-	   // console.log('addChildMessage : childSyncMessage:');
-	   // console.log(childSyncMessage);
-	   // console.log();
-	    
-	    this.childSyncMessages.push(childSyncMessage);
-	}
-}
+let syncGroupManager = new SyncGroupManager();
 
 //
 // Events Handlers
-//
+
 
 client.on('message', async message => {
     // Ignore messages from the bot
@@ -411,12 +62,11 @@ client.on('message', async message => {
             message.channel.send('pong');
         
         } else if (command === 'create-group' || command === 'cg') {
-            let syncGroup = SyncGroup.lookup(args[0]);
+            let syncGroup = syncGroupManager.lookup(args[0]);
             
             if (syncGroup == null) {
                 let syncGroup = new SyncGroup(args[0]);
-                allSyncGroups.push(syncGroup);
-                
+                syncGroupManager.add(syncGroup);
 			    message.channel.send('Created sync group: ' + args[0]);
                 
                 console.log('Sync Group:');
@@ -429,7 +79,7 @@ client.on('message', async message => {
             }
         
         } else if (command === 'add-channel' || command === 'ac') {
-            let syncGroup = SyncGroup.lookup(args[0]);
+            let syncGroup = syncGroupManager.lookup(args[0]);
             
             if (syncGroup == null) {
                 message.channel.send('Could not find sync group named: ' + args[0]);
@@ -445,7 +95,7 @@ client.on('message', async message => {
             console.log();
         
         } else if (command === 'show-group' || command == 'sg') {
-            let syncGroup = SyncGroup.lookup(args[0]);
+            let syncGroup = syncGroupManager.lookup(args[0]);
             
             if (syncGroup == null) {
                 message.channel.send('Could not find sync group named: ' + args[0]);
@@ -468,7 +118,7 @@ client.on('message', async message => {
     //
 
     // See if we can find a sync group for this message's channel
-    let syncGroup = SyncGroup.lookup(message.channel);
+    let syncGroup = syncGroupManager.lookup(message.channel);
     
     if (syncGroup != null) {
         console.log('Found sync group:');
@@ -490,7 +140,7 @@ client.on('messageUpdate', async (oldMessage, newMessage) => {
     }
     
     // See if we can find a sync group for this message's channel
-    let syncGroup = SyncGroup.lookup(newMessage.channel);
+    let syncGroup = syncGroupManager.lookup(newMessage.channel);
     
     if (syncGroup != null) {
         console.log('Found sync group:');
@@ -511,7 +161,7 @@ client.on('messageDelete', async message => {
     }
     
     // See if we can find a sync group for this message's channel
-    let syncGroup = SyncGroup.lookup(message.channel);
+    let syncGroup = syncGroupManager.lookup(message.channel);
     
     if (syncGroup != null) {
         console.log('Found sync group:');
@@ -555,11 +205,11 @@ client.once('ready', () => {
                             let syncGroupName = webhook.name.substring(webhook.name.indexOf('-') + 1).trim();
                             console.log('Found sync group: ' + syncGroupName);
 
-                            let syncGroup = SyncGroup.lookup(syncGroupName);
+                            let syncGroup = syncGroupManager.lookup(syncGroupName);
                             
                             if (syncGroup == null) {
                                 syncGroup = new SyncGroup(syncGroupName);
-                                allSyncGroups.push(syncGroup);
+                                syncGroupManager.add(syncGroup);
                             }
                             
                             let syncChannel = syncGroup.addChannel(channel);
@@ -594,13 +244,13 @@ client.on('message', message => {
 });
 
 client.on('message', message => {
-    if (message.content == 'dadbot channel id') {
+    if (message.content == 'ninkasi channel id') {
         message.channel.send(message.channel.id);
     }
 });
 
 client.on('message', message => {
-    if (message.content == 'dadbot guild id') {
+    if (message.content == 'ninkasi guild id') {
         message.channel.send(message.guild.id);
     }
 });
