@@ -1,114 +1,86 @@
 
-// Import external modules
-const Discord = require('discord.js');
-const dotenv  = require('dotenv');
-const sqlite3 = require('sqlite3');
-
-// Include class modules
-const SyncGroupManager = require('./lib/SyncGroupManager');
-const SyncGroup        = require('./lib/SyncGroup');
-
 // Verify the node version is 14.0.0 or above
 if (Number(process.version.slice(1).split(".")[0]) < 14)
     throw new Error('Node 14.0.0 or above is required. Update Node on your system.');
+
+// Import external modules
+const Discord = require('discord.js');
+const dotenv  = require('dotenv');
+const fs      = require('fs');
+// const sqlite3 = require('sqlite3');
+
+// Include class modules
+const SyncGroup = require('./lib/SyncGroup');
 
 // set up dotenv
 dotenv.config();
 
 // get the db going
-let db = new sqlite3.Database('./db/ninkasi.db', (err) => {
-    if (err) {
-        console.error(err.message);
-    }
-
-    console.log('Connected to the dadabase.');
-});
+// let db = new sqlite3.Database('./db/ninkasi.db', (err) => {
+//     if (err) {
+//         console.error(err.message);
+//     }
+//
+//     console.log('Connected to the dadabase.');
+// });
 
 const client = new Discord.Client();
-client.login(process.env.BOT_TOKEN);
+client.commands = new Discord.Collection();
+client.login(process.env.TOKEN);
+
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+	const command = require(`./commands/${file}`);
+	client.commands.set(command.name, command);
+}
 
 //
 // Constants
 //
 
-const bot_id = '807375870574329907';
-const prefix = '%';
+const prefix = process.env.PREFIX;
 
 //
-// Global variables
+// Load singletons
 //
 
-let syncGroupManager = new SyncGroupManager();
+const syncGroupManager = require('./lib/SyncGroupManager');
 
 //
 // Events Handlers
-
+//
 
 client.on('message', async message => {
     // Ignore messages from the bot
-    if (message.author.bot) {
-        return;
-    }
-    
+    if (message.author.bot) return;
+
     console.log('Incoming Message:');
     console.log(message);
     console.log();
     
     if (message.content.startsWith(prefix)) {
         const args = message.content.slice(prefix.length).trim().split(/ +/);
-        const command = args.shift().toLowerCase();
+        const commandName = args.shift().toLowerCase();
         
-        if (command === 'ping') {
-            message.channel.send('pong');
+        // if (!client.commands.has(command)) return;
         
-        } else if (command === 'create-group' || command === 'cg') {
-            let syncGroup = syncGroupManager.lookup(args[0]);
-            
-            if (syncGroup == null) {
-                let syncGroup = new SyncGroup(args[0]);
-                syncGroupManager.add(syncGroup);
-			    message.channel.send('Created sync group: ' + args[0]);
-                
-                console.log('Sync Group:');
-                console.log(syncGroup);
-                console.log();
-            
-            } else {
-                message.channel.send('Sync group already exists: ' + args[0]);
-            
-            }
+        if (!client.commands.has(commandName)) return;
         
-        } else if (command === 'add-channel' || command === 'ac') {
-            let syncGroup = syncGroupManager.lookup(args[0]);
-            
-            if (syncGroup == null) {
-                message.channel.send('Could not find sync group named: ' + args[0]);
-            }
-            
-            let syncChannel = syncGroup.addChannel(message.channel);
-            syncChannel.createWebhook();
-            
-            message.channel.send('Added channel to sync group: ' + syncGroup.name);
-            
-            console.log('Sync Channel:');
-            console.log(syncChannel);
-            console.log();
+        const command = client.commands.get(commandName);
         
-        } else if (command === 'show-group' || command == 'sg') {
-            let syncGroup = syncGroupManager.lookup(args[0]);
-            
-            if (syncGroup == null) {
-                message.channel.send('Could not find sync group named: ' + args[0]);
-            
-            } else {
-                message.channel.send("Sync group '" + syncGroup.name + "' found with " + syncGroup.syncChannels.length + ' channel(s)');
-            
-            }
-        
-        } else {
-            message.channel.send('Command not recognized: ' + command);
-         
+        if (command.guildOnly && message.channel.type === 'dm') {
+            return message.reply('I cannot execute that command inside DMs!');
         }
+        
+        try {
+            command.execute(message, args);
+        } catch (error) {
+            console.error(error);
+            message.reply('there was an error trying to execute that command!');
+        }
+        
+        //message.channel.send('Command not recognized: ' + command);
         
         return;
     }
@@ -204,7 +176,7 @@ client.once('ready', () => {
                         if (webhook.name.startsWith('sync - ')) {
                             let syncGroupName = webhook.name.substring(webhook.name.indexOf('-') + 1).trim();
                             console.log('Found sync group: ' + syncGroupName);
-
+    
                             let syncGroup = syncGroupManager.lookup(syncGroupName);
                             
                             if (syncGroup == null) {
