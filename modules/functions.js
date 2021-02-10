@@ -1,5 +1,5 @@
 
-let axios = require('axios');;
+let axios = require('axios');
 
 async function http_post(url, data) {
     let result =

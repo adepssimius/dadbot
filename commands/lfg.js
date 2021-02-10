@@ -2,16 +2,16 @@
 const conf = {
     enabled: true,
     guildOnly: false,
-    aliases: ['sc'],
-    permLevel: 'User'
+    aliases: [],
+    permLevel: "User"
 };
 exports.conf = conf;
 
 const help = {
-    name: 'sync-channel',
-    category: 'Message Syncronization',
-    description: 'Sync Channel administration command',
-    usage: 'sync-command <add-stuff-here>'
+    name: 'lfg',
+    category: 'Activity Coordination',
+    description: 'Looking for group command',
+    usage: 'lfg <add-stuff-here>'
 };
 exports.help = help;
 

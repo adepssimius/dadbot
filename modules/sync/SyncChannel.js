@@ -1,7 +1,7 @@
 
-const http_post   = require('./../functions').http_post;
-const http_patch  = require('./../functions').http_patch;
-const http_delete = require('./../functions').http_delete;
+const http_post   = require('../../modules/functions').http_post;
+const http_patch  = require('../../modules/functions').http_patch;
+const http_delete = require('../../modules/functions').http_delete;
 
 class SyncChannel {
     constructor(channel, syncGroupName) {

@@ -1,7 +1,11 @@
 
+// Load our classes
 const SyncChannel      = require('./SyncChannel');
 const SyncMessage      = require('./SyncMessage');
 const SyncMessageQueue = require('./SyncMessageQueue');
+
+// Load singletons
+const syncGroupManager = require('./SyncGroupManager');
 
 class SyncGroup {
     constructor(name) {
@@ -14,30 +18,24 @@ class SyncGroup {
         console.log('Searching sync group: ' + this.name);
         
         // When lookupValue is the channel ID
-        if (typeof lookupValue == 'string') {
-            return this.syncChannels.get(lookupValue);
-        
-        // When lookupValue is a channel
-        } else {
-            return this.syncChannels.get(lookupValue.id);
-        }
-        
-        //for (let x = 0; x < this.syncChannels.length; x++) {
-        //    console.log('Checking channel with id = ' + this.syncChannels[x].channel.id);
-        //    
-        //    if (channel.id == this.syncChannels[x].channel.id) {
-        //        return this.syncChannels[x];
-        //    }
-        //}
+        const syncChannelID = (typeof lookupValue == 'string' ? lookupValue : lookupValue.id);
+        return this.syncChannels.get(syncChannelID);
     }
 
 	addChannel(channel) {
-        let syncChannel = new SyncChannel(channel, this.name);
+	    // Add the SyncChannnel to our SyncChannel Map
+        const syncChannel = new SyncChannel(channel, this.name);
         this.syncChannels.set(channel.id, syncChannel);
+        
         return syncChannel;
     }
     
     deleteChannel(channel) {
+        // Delete the webhook first
+        const syncChannel = this.lookup(channel.id);
+        syncChannel.deleteWebhook();
+        
+        // Then remove the channel from this SyncGroup
         this.syncChannels.delete(channel.id);
     }
     
