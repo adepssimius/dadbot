@@ -9,7 +9,7 @@ const syncGroupManager = require('../modules/sync/SyncGroupManager');
 module.exports = async (client, message) => {
     // Ignore messages from the bot
     if (message.author.bot) return;
-
+    
     console.log('Incoming Message:');
     console.log(message);
     console.log();
@@ -17,9 +17,9 @@ module.exports = async (client, message) => {
     // If we find the prefix, attempt to process the command
     if (message.content.startsWith(client.config.prefix)) {
         client.runCommand(message);
-
+    
     // Otherwise, attempt to send the message to the synchronization group
-    } else {
-        syncGroupManager.sendMessage(client, message);
+    //} else {
+    //    syncGroupManager.sendMessage(client, message);
     }
 };

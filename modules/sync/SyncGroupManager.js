@@ -1,9 +1,13 @@
 
-// Load external modules
+// Load external module
 const TextChannel = require('discord.js').TextChannel;
 
 // Load our classes
 const SyncGroup = require('./SyncGroup');
+
+// Load singletons
+const client = require('../Client.js');
+//const knex   = client.knex;
 
 class SyncGroupManager {
     constructor() {
@@ -11,18 +15,19 @@ class SyncGroupManager {
         this.channelMap = new Map();
     }
     
-    lookup(lookupValue) {
-        let syncGroupName;
+    lookup(syncGroupName) {
+        //client.logger.log('test message');
+        //console.log(knex);
         
-        if (typeof lookupValue == 'string') {
-            syncGroupName = lookupValue;
-            
-        } else if (lookupValue instanceof TextChannel) {
-            const channel = lookupValue;
-            syncGroupName = this.channelMap.get(channel.id);
-        }
-        
-        return this.syncGroups.get(syncGroupName);
+        //if (typeof lookupValue == 'string') {
+        //    syncGroupName = lookupValue;
+        //    
+        //} else if (lookupValue instanceof TextChannel) {
+        //    const channel = lookupValue;
+        //    syncGroupName = this.channelMap.get(channel.id);
+        //}
+        //
+        //return this.syncGroups.get(syncGroupName);
     }
     
     add(syncGroup) {
@@ -131,7 +136,7 @@ class SyncGroupManager {
     }
 }
 
-const syncGroupManager = new SyncGroupManager();
+const syncGroupManager = new SyncGroupManager(client);
 Object.freeze(syncGroupManager);
 
 module.exports = syncGroupManager;

@@ -1,18 +1,64 @@
 
 // Load our classes
+const BaseModel        = require('../BaseModel.js');
 const SyncChannel      = require('./SyncChannel');
 const SyncMessage      = require('./SyncMessage');
 const SyncMessageQueue = require('./SyncMessageQueue');
 
 // Load singletons
+const client           = require('../Client.js');
+const knex             = require('../Database.js');
 const syncGroupManager = require('./SyncGroupManager');
 
-class SyncGroup {
-    constructor(name) {
-		this.name = name;
+class SyncGroup extends BaseModel {
+    static tableName = 'sync_group';
+    
+    static async get(conditions) {
+        let result = [];
+        
+        if (conditions != null) {
+            await knex(this.getTableName())
+                .where(conditions)
+                .then(function(rows) {
+                    for (let x = 0; x < rows.length; x++) {
+                        result.push(new SyncGroup(rows[x]));
+                    }
+                });
+        } else {
+            await knex(this.getTableName())
+                .then(function(rows) {
+                    for (let x = 0; x < rows.length; x++) {
+                        result.push(new SyncGroup(rows[x]));
+                    }
+                });
+        }
+            
+        return result;
+    }
+    
+    static async create(data) {
+        data.sync_group_id = data.name;
+        
+        await knex(this.getTableName())
+            .insert(data)
+            .then(function(result) {
+                console.log('Insert Result:');
+                console.log(result);
+                return new SyncGroup(data);
+            });
+    }
+
+    constructor(data) {
+        super();
+        this.id   = data.sync_group_id;
+		this.name = data.name;
         this.syncChannels = new Map();
         this.syncMessageQueue = new SyncMessageQueue();
     }
+    
+    //
+    // TODO - Knex refactor not done below here
+    //
     
     lookup(lookupValue) {
         console.log('Searching sync group: ' + this.name);

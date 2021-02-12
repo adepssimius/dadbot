@@ -1,10 +1,47 @@
 
+// Load singletons
+const knex = require('../Database.js');
+
+// Load external functions
 const http_post   = require('../../modules/functions').http_post;
 const http_patch  = require('../../modules/functions').http_patch;
 const http_delete = require('../../modules/functions').http_delete;
 
-class SyncChannel {
+// Load our classes
+const BaseModel = require('../BaseModel.js');
+
+class SyncChannel extends BaseModel {
+    static tableName = 'channel';
+    
+    static async get(conditions) {
+        let result = [];
+        
+        if (conditions != null) {
+            await knex(this.getTableName())
+                .where(conditions)
+                .then(function(rows) {
+                    for (let x = 0; x < rows.length; x++) {
+                        result.push(new SyncChannel(rows[x]));
+                    }
+                });
+        } else {
+            await knex(this.getTableName())
+                .then(function(rows) {
+                    for (let x = 0; x < rows.length; x++) {
+                        result.push(new SyncChannel(rows[x]));
+                    }
+                });
+        }
+            
+        return result;
+    }
+    
+    //
+    // TODO - Knex refactor not done below here
+    //
+    
     constructor(channel, syncGroupName) {
+        super();
         this.channel       = channel;
         this.syncGroupName = syncGroupName;
         this.webhook       = null;

@@ -3,7 +3,7 @@
 const SyncGroup = require('../../modules/sync/SyncGroup');
 
 // Load singletons
-const syncGroupManager = require('../../modules/sync/SyncGroupManager');
+const client = require('../../modules/Client.js');
 
 const conf = {
     enabled: true,
@@ -28,17 +28,18 @@ const run = async (client, message, args, level) => { // eslint-disable-line no-
         return;
     }
     
-    const syncGroupName = args[0];
-    let syncGroup = syncGroupManager.lookup(syncGroupName);
+    const name = args[0];
+    const data = {'name': name};
     
-    if (syncGroup != null) {
-        message.channel.send(`There is already a channel synchronization group called '${syncGroupName}'`);
+    const syncGroups = await SyncGroup.get(data);
+    
+    if (syncGroups.length ) {
+        message.channel.send(`There is already a channel synchronization group called '${name}'`);
         return;
     }
     
-    syncGroup = new SyncGroup(syncGroupName);
-    syncGroupManager.add(syncGroup);
-    message.channel.send('Created sync group: ' + syncGroupName);
+    const syncGroup = SyncGroup.create(data);
+    message.channel.send(`Created sync group: ${name}`);
     
     console.log('Sync Group:');
     console.log(syncGroup);

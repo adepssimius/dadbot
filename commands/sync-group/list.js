@@ -1,6 +1,11 @@
 
+// Load our classes
+const SyncGroup   = require('../../modules/sync/SyncGroup');
+const SyncChannel = require('../../modules/sync/SyncChannel');
+
 // Load singletons
 const syncGroupManager = require('../../modules/sync/SyncGroupManager');
+const client = require('../../modules/Client.js');
 
 const conf = {
     enabled: true,
@@ -20,22 +25,18 @@ const help = {
 exports.help = help;
 
 const run = async (client, message, args, level) => { // eslint-disable-line no-unused-vars
-    let response = `Found ${syncGroupManager.syncGroups.size} message group`;
+    const syncGroups = await SyncGroup.get();
     
-    if (syncGroupManager.syncGroups.size == 0 || syncGroupManager.syncGroups.size > 1) {
+    let response = `Found ${syncGroups.length} message group`;
+    
+    if (syncGroups.length == 0 || syncGroups.length > 1) {
         response += 's';
     }
     
-    let index = 1;
-    for (let syncGroup of syncGroupManager.syncGroups.values()) {
-        response += `\n   ${index}. ${syncGroup.name} (${syncGroup.syncChannels.size} channel`;
-        
-        if (syncGroup.syncChannels.size == 0 || syncGroup.syncChannels.size > 1) {
-            response += 's';
-        }
-        response += ')';
-        
-        index++;
+    for (let x = 0; x < syncGroups.length; x++) {
+        const syncGroup    = syncGroups[x];
+        const syncChannels = await SyncChannel.get({'sync_group_id': syncGroup.id});
+        response += `\n   ${x+1}. ${syncGroup.name} (${syncChannels.length} channel${syncChannels.length != 1 ? 's' : ''})`;
     }
     
     message.channel.send(response);

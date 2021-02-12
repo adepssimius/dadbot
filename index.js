@@ -12,6 +12,98 @@ const fs      = require('fs');
 // Setup dotenv
 dotenv.config();
 
+// Load the database connection
+const knex = require('./modules/Database.js');
+
+knex.schema.hasTable('sync_group').then(function(exists) {
+    if (!exists) {
+        knex.schema.createTable('sync_group', function (table) {
+            table.string('sync_group_id', 20).notNullable();
+            table.primary('sync_group_id');
+            
+            table.string('name', 32).notNullable();
+            table.timestamps();
+        }).then(console.log('Created Table: sync_group'));
+    }
+});
+
+// knex.schema.hasTable('guild').then(function(exists) {
+//     if (!exists) {
+//         knex.schema.createTable('guild', function (table) {
+//             table.string('guild_id', 20).notNullable();
+//             table.primary('guild_id');
+//
+//             table.timestamps();
+//         }).then(console.log('Created Table: guild'));
+//     }
+// });
+
+knex.schema.hasTable('channel').then(function(exists) {
+    if (!exists) {
+        knex.schema.createTable('channel', function (table) {
+            table.string('guild_id', 20).notNullable();
+            table.string('channel_id', 20).notNullable();
+            table.primary(['guild_id', 'channel_id']);
+            
+            table.string('sync_group_id', 20).notNullable();
+            table.foreign('sync_group_id', 'channel_sync_group_fk')
+                .references('sync_group_id')
+                .inTable('sync_group');
+            
+            table.string('webhook_id', 20);
+            table.timestamps();
+        }).then(console.log('Created Table: channel'));
+    }
+});
+
+knex.schema.hasTable('message').then(function(exists) {
+    if (!exists) {
+        knex.schema.createTable('message', function (table) {
+            table.string('guild_id', 20).notNullable();
+            table.string('channel_id', 20).notNullable();
+            table.string('message_id', 20).notNullable();
+            table.primary(['guild_id', 'channel_id', 'message_id']);
+            
+            table.string('sync_group_id', 20).notNullable();
+            table.foreign('sync_group_id', 'message_sync_group_fk')
+                .references('sync_group_id')
+                .inTable('sync_group');
+            
+            table.string('webhook_id', 20);
+            table.string('content', 2000);
+            table.timestamps();
+            
+        }).then(console.log('Created Table: message'));
+    }
+});
+
+knex.schema.hasTable('message_clone').then(function(exists) {
+    if (!exists) {
+        knex.schema.createTable('message_clone', function (table) {
+            table.string('guild_id', 20).notNullable();
+            table.string('channel_id', 20).notNullable();
+            table.string('message_id', 20).notNullable();
+            table.primary(['guild_id', 'channel_id', 'message_id']);
+            
+            table.string('sync_group_id', 20).notNullable();
+            table.foreign('sync_group_id', 'channel_clone_sync_group_fk')
+                .references('sync_group_id')
+                .inTable('sync_group');
+            
+            table.string('orig_guild_id', 20).notNullable();
+            table.string('orig_channel_id', 20).notNullable();
+            table.string('orig_message_id', 20).notNullable();
+            table.foreign(['orig_guild_id', 'orig_channel_id', 'orig_message_id'], 'message_clone_message_fk')
+                .references(['guild_id','channel_id','message_id'])
+                .inTable('message');
+            
+            table.timestamps();
+        }).then(console.log('Created Table: message_clone'));
+    }
+});
+
+//return;
+
 // get the db going
 // let db = new sqlite3.Database('./db/ninkasi.db', (err) => {
 //     if (err) {
@@ -21,21 +113,7 @@ dotenv.config();
 //     console.log('Connected to the dadabase.');
 // });
 
-const client = new Discord.Client();
-
-// Setup the logger and extra client functions
-client.logger = require('./modules/Logger');
-require('./modules/clientFunctions')(client);
-
-// Add Collections for commands and aliases
-client.commands = new Discord.Collection();
-client.aliases  = new Discord.Collection();
-
-// Set our prefix and token
-client.config = {
-    prefix: process.env.PREFIX,
-    token: process.env.TOKEN
-};
+const client = require('./modules/Client.js');
 
 // We're doing real fancy node 8 async/await stuff here, and to do that
 // we need to wrap stuff in an anonymous function. It's annoying but it works.
