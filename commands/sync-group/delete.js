@@ -1,6 +1,9 @@
 
+// Load our classes
+const SyncGroup = require('../../modules/sync/SyncGroup');
+
 // Load singletons
-const syncGroupManager = require('../../modules/sync/SyncGroupManager');
+const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
@@ -15,30 +18,32 @@ const help = {
     name: 'delete',
     category: 'Message Synchronization',
     description: 'Sync Channel administration command',
-    usage: 'sync-command delete <group-name>'
+    usage: 'sync-group delete <group-name>'
 };
 exports.help = help;
 
-const run = async (client, message, args, level) => { // eslint-disable-line no-unused-vars
+const run = async (message, args, level) => {
     if (args.length != 1) {
         message.reply(`Usage: ${client.config.prefix}${help.usage}`);
         return;
     }
     
-    const syncGroupName = args[0];
-    const syncGroup = syncGroupManager.lookup(syncGroupName);
+    const name = args[0];
+    const syncGroups = await SyncGroup.get({name: name});
     
-    if (syncGroup == null) {
-        message.channel.send(`Could not find a channel synchronization group named '${syncGroupName}'`);
+    if (syncGroups.length == 0) {
+        message.channel.send(`Could not find a channel synchronization group named '${name}'`);
         return;
     }
     
+    const syncGroup = syncGroups[0];
+    
     try {
-        syncGroupManager.delete(syncGroup);
-        message.channel.send(`Channel synchronization group '${syncGroup.name}' deleted`);
+        await syncGroup.delete();
+        message.channel.send(`Channel synchronization group '${name}' deleted`);
     } catch (error) {
-        message.channel.send(`Error deleting synchronization group '${syncGroup.name}'`);
-        throw `Error deleting synchronization group '${syncGroup.name}' - ${error}`;
+        message.channel.send(`Error deleting synchronization group '${name}'`);
+        throw `Error deleting synchronization group '${name}' - ${error}`;
     }
 };
 exports.run = run;

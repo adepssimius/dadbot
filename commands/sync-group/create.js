@@ -1,9 +1,10 @@
 
 // Load our classes
-const SyncGroup = require('../../modules/sync/SyncGroup');
+const SyncGroup      = require('../../modules/sync/SyncGroup');
+const DuplicateError = require('../../modules/error/DuplicateError');
 
 // Load singletons
-const client = require('../../modules/Client.js');
+const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
@@ -18,31 +19,33 @@ const help = {
     name: 'create',
     category: 'Message Synchronization',
     description: 'Create a new channel synchronization group',
-    usage: 'sync-command create <group-name>'
+    usage: 'sync-group create <group-name>'
 };
 exports.help = help;
 
-const run = async (client, message, args, level) => { // eslint-disable-line no-unused-vars
+const run = async (message, args, level) => {
     if (args.length != 1) {
         message.reply(`Usage: ${client.config.prefix}${help.usage}`);
         return;
     }
     
     const name = args[0];
-    const data = {'name': name};
-    
-    const syncGroups = await SyncGroup.get(data);
-    
-    if (syncGroups.length ) {
-        message.channel.send(`There is already a channel synchronization group called '${name}'`);
-        return;
+    try {
+        const syncGroup = await SyncGroup.create({name: name});
+        message.channel.send(`Created sync group: ${name}`);
+        
+        client.logger.debug('Sync Group:');
+        client.logger.dump(syncGroup);
+    } catch (error) {
+        if (error instanceof DuplicateError) {
+            message.channel.send(error.message);
+            return;
+        } else {
+            const details = `Error creating synchronization group '${name}'`;
+            message.channel.send(details);
+            client.logger.error(details);
+            client.logger.dump(error);
+        }
     }
-    
-    const syncGroup = SyncGroup.create(data);
-    message.channel.send(`Created sync group: ${name}`);
-    
-    console.log('Sync Group:');
-    console.log(syncGroup);
-    console.log();
 };
 exports.run = run;

@@ -1,6 +1,11 @@
 
+// Load our classes
+const SyncGroup      = require('../../modules/sync/SyncGroup');
+const SyncChannel    = require('../../modules/sync/SyncChannel');
+const DuplicateError = require('../../modules/error/DuplicateError');
+
 // Load singletons
-const syncGroupManager = require('../../modules/sync/SyncGroupManager');
+const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
@@ -19,23 +24,44 @@ const help = {
 };
 exports.help = help;
 
-const run = async (client, message, args, level) => { // eslint-disable-line no-unused-vars
-    const syncGroupName = args[0];
-    const syncGroup = syncGroupManager.lookup(syncGroupName);
+const run = async (message, args, level) => {
+    //
+    // TODO - Enhance this function so that a channel reference can be given
+    // instead of always linking to the channel from which the command was called
+    //
     
-    if (syncGroup == null) {
-        message.channel.send(`Could not find a synchronization group named '${syncGroupName}'`);
+    if (args.length != 1) {
+        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
         return;
     }
     
-    const syncChannel = syncGroupManager.addChannelToGroup(message.channel, syncGroup);
-    // TODO - replace this with a check inside of addChannel to see if we need to create the webhook
-    syncChannel.createWebhook();
+    const syncGroupName = args[0];
+    const syncGroups = await SyncGroup.get({name: syncGroupName});
     
-    message.channel.send(`Channel linked to synchronization group '${syncGroup.name}'`);
+    if (syncGroups.length == 0) {
+        message.channel.send(`Could not find a channel synchronization group named '${syncGroupName}'`);
+        return;
+    }
     
-    console.log('Sync Channel:');
-    console.log(syncChannel);
-    console.log();
+    const syncGroup = syncGroups[0];
+    const data = {'syncGroup': syncGroup, 'channel': message.channel};
+    
+    try {
+        const syncChannel = await SyncChannel.create(data);
+        message.channel.send(`Channel linked to synchronization group '${syncGroup.name}'`);
+        
+        client.logger.debug('Sync Channel:');
+        client.logger.dump(syncChannel);
+    } catch (error) {
+        if (error instanceof DuplicateError) {
+            message.channel.send(error.message);
+            return;
+        } else {
+            const details = `Error linking channel to synchronization group '${syncGroup.name}'`;
+            message.channel.send(details);
+            client.logger.error(details);
+            client.logger.dump(error);
+        }
+    }
 };
 exports.run = run;

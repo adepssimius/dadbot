@@ -121,7 +121,7 @@ module.exports = (client) => {
         client.logger.cmd(`[CMD] ${message.author.username} (${message.author.id}) ran command ${command.help.name}`);
         
         try {
-            command.run(client, message, args, level);
+            command.run(message, args, level);
         } catch (error) {
             console.error(error);
             message.reply('There was an error trying to execute that command!');
@@ -169,7 +169,7 @@ module.exports = (client) => {
         client.logger.cmd(`[CMD] ${message.author.username} (${message.author.id}) ran command action ${command.help.name} ${action.help.name}`);
         
         try {
-            action.run(client, message, args, level);
+            action.run(message, args, level);
         } catch (error) {
             console.error(error);
             message.reply('There was an error trying to execute that command action!');

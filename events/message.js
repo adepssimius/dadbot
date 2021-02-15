@@ -1,25 +1,25 @@
 
 // Load singletons
-const syncGroupManager = require('../modules/sync/SyncGroupManager');
+const SyncMessage = require('../modules/sync/SyncMessage');
+const client = require('../modules/Client.js'); // eslint-disable-line no-unused-vars
 
 // The MESSAGE event runs anytime a message is received
 // Note that due to the binding of client to every event, every event
 // goes `client, other, args` when this function is run.
 
-module.exports = async (client, message) => {
+module.exports = async (message) => {
     // Ignore messages from the bot
     if (message.author.bot) return;
     
-    console.log('Incoming Message:');
-    console.log(message);
-    console.log();
-    
+    client.logger.debug('Incoming Message');
+    client.logger.dump(message);
+
     // If we find the prefix, attempt to process the command
     if (message.content.startsWith(client.config.prefix)) {
         client.runCommand(message);
     
     // Otherwise, attempt to send the message to the synchronization group
-    //} else {
-    //    syncGroupManager.sendMessage(client, message);
+    } else {
+        SyncMessage.sync(message);
     }
 };

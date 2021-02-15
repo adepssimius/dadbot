@@ -1,15 +1,16 @@
 
 // Load singletons
-const syncGroupManager = require('../modules/sync/SyncGroupManager');
+const SyncMessage = require('../modules/sync/SyncMessage');
+const client = require('../modules/Client.js'); // eslint-disable-line no-unused-vars
 
 // 
 // TODO - Add event description here (see message.js for an example)
 // 
 
-module.exports = async (client, oldMessage, newMessage) => {
+module.exports = async (oldMessage, newMessage) => {
     // Ignore messages from the bot
     if (newMessage.author.bot) return;
     
     // Attempt to update the message
-    syncGroupManager.updateMessage(client, oldMessage, newMessage);
+    SyncMessage.syncUpdate(oldMessage, newMessage);
 };

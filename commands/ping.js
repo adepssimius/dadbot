@@ -1,4 +1,7 @@
 
+// Load singletons
+const client = require('../modules/Client.js'); // eslint-disable-line no-unused-vars
+
 exports.conf = {
     enabled: true,
     guildOnly: false,
@@ -13,7 +16,7 @@ exports.help = {
     usage: 'ping'
 };
 
-exports.run = async (client, message, args, level) => { // eslint-disable-line no-unused-vars
+exports.run = async (message, args, level) => {
     const msg = await message.channel.send('ping');
     msg.edit(`pong - latency is ${msg.createdTimestamp - message.createdTimestamp}ms. API Latency is ${Math.round(client.ws.ping)}ms`);
 };

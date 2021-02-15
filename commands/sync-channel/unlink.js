@@ -1,6 +1,10 @@
 
+// Load our classes
+const SyncGroup   = require('../../modules/sync/SyncGroup');
+const SyncChannel = require('../../modules/sync/SyncChannel');
+
 // Load singletons
-const syncGroupManager = require('../../modules/sync/SyncGroupManager');
+const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
@@ -19,15 +23,36 @@ const help = {
 };
 exports.help = help;
 
-const run = async (client, message, args, level) => { // eslint-disable-line no-unused-vars
-    const syncGroup = syncGroupManager.lookup(message.channel);
+const run = async (message, args, level) => {
+    //
+    // TODO - Enhance this function so that a channel reference can be given
+    // instead of always linking to the channel from which the command was called
+    //
     
-    if (syncGroup == null) {
-        message.channel.send('Channel is not linked to a sync group');
+    if (args.length != 0) {
+        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
         return;
     }
     
-    syncGroupManager.deleteChannelFromGroup(message.channel, syncGroup);
-    message.channel.send(`Channel unlinked from synchronization group '${syncGroup.name}'`);
+    const syncChannels = await SyncChannel.get({channel_id: message.channel.id});
+    
+    if (syncChannels.length == 0) {
+        message.channel.send(`This channel is not linked to a channel synchronization group`);
+        return;
+    }
+    
+    const syncChannel = syncChannels[0];
+    const syncGroups  = await SyncGroup.get({sync_group_id: syncChannel.sync_group_id});
+    const syncGroup   = syncGroups[0];
+    
+    try {
+        await syncChannel.delete();
+        message.channel.send(`Channel unlinked from synchronization group '${syncGroup.name}'`);
+    } catch (error) {
+        const details = `Error unlinking channel from synchronization group '${syncGroup.name}'`;
+        message.channel.send(details);
+        client.logger.error(details);
+        client.logger.dump(error);
+    }
 };
 exports.run = run;

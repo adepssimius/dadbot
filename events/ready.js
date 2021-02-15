@@ -1,11 +1,8 @@
 
-// Load our classes
-const SyncGroup = require('../modules/sync/SyncGroup');
-
 // Load singletons
-const syncGroupManager = require('../modules/sync/SyncGroupManager');
+const client = require('../modules/Client.js'); // eslint-disable-line no-unused-vars
 
-module.exports = async (client) => {
+module.exports = async () => {
     // Log that the bot is online.
     client.logger.log(`${client.user.tag}, ready to serve ${client.users.cache.size} users in ${client.guilds.cache.size} servers.`, "ready");
 

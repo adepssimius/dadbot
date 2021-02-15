@@ -12,8 +12,9 @@ const fs      = require('fs');
 // Setup dotenv
 dotenv.config();
 
-// Load the database connection
+// Load the database connection and client
 const knex = require('./modules/Database.js');
+const client = require('./modules/Client.js');
 
 knex.schema.hasTable('sync_group').then(function(exists) {
     if (!exists) {
@@ -22,8 +23,8 @@ knex.schema.hasTable('sync_group').then(function(exists) {
             table.primary('sync_group_id');
             
             table.string('name', 32).notNullable();
-            table.timestamps();
-        }).then(console.log('Created Table: sync_group'));
+            table.timestamps(false, true);
+        }).then(client.logger.log('Created Table: sync_group'));
     }
 });
 
@@ -41,66 +42,100 @@ knex.schema.hasTable('sync_group').then(function(exists) {
 knex.schema.hasTable('channel').then(function(exists) {
     if (!exists) {
         knex.schema.createTable('channel', function (table) {
-            table.string('guild_id', 20).notNullable();
             table.string('channel_id', 20).notNullable();
-            table.primary(['guild_id', 'channel_id']);
+            table.primary(['channel_id']);
+            
+            table.string('guild_id', 20).notNullable();
+            // TODO - Add this in if we add a guild table
+            //table.foreign('guild_id', 'channel_guild__fk')
+            //    .references('guild_id')
+            //    .inTable('guild');
             
             table.string('sync_group_id', 20).notNullable();
             table.foreign('sync_group_id', 'channel_sync_group_fk')
                 .references('sync_group_id')
                 .inTable('sync_group');
             
-            table.string('webhook_id', 20);
-            table.timestamps();
-        }).then(console.log('Created Table: channel'));
+            table.string('webhook_id', 20).notNullable();
+            table.string('webhook_url', 256).notNullable();
+            
+            table.timestamps(false, true);
+        }).then(client.logger.log('Created Table: channel'));
     }
 });
 
 knex.schema.hasTable('message').then(function(exists) {
     if (!exists) {
         knex.schema.createTable('message', function (table) {
-            table.string('guild_id', 20).notNullable();
-            table.string('channel_id', 20).notNullable();
             table.string('message_id', 20).notNullable();
-            table.primary(['guild_id', 'channel_id', 'message_id']);
+            table.primary(['message_id']);
+            
+            table.string('channel_id', 20).notNullable();
+            table.foreign('channel_id', 'message_channel_fk')
+                .references('channel_id')
+                .inTable('channel');
+            
+            table.string('guild_id', 20).notNullable();
+            // TODO - Add this in if we add a guild table
+            //table.foreign('guild_id', 'message_guild_fk')
+            //    .references('guild_id')
+            //    .inTable('guild');
             
             table.string('sync_group_id', 20).notNullable();
             table.foreign('sync_group_id', 'message_sync_group_fk')
                 .references('sync_group_id')
                 .inTable('sync_group');
             
-            table.string('webhook_id', 20);
-            table.string('content', 2000);
-            table.timestamps();
+            table.boolean('is_clone').notNullable().defaultTo(false);
             
-        }).then(console.log('Created Table: message'));
+            table.string('orig_message_id', 20);
+            table.foreign('orig_message_id', 'message_orig_message_fk')
+                .references('message_id')
+                .inTable('message');
+            
+            table.string('orig_channel_id', 20);
+            table.foreign('orig_channel_id', 'message_orig_channel_fk')
+                .references('channel_id')
+                .inTable('channel');
+            
+            table.string('orig_guild_id', 20);
+            // TODO - Add this in if we add a guild table
+            //table.foreign('orig_guild_id', 'message_orig_guild_fk')
+            //    .references('guild_id')
+            //    .inTable('guild');
+            
+            table.string('content', 2000);
+            table.timestamps(false, true);
+            
+        }).then(client.logger.log('Created Table: message'));
     }
 });
 
-knex.schema.hasTable('message_clone').then(function(exists) {
-    if (!exists) {
-        knex.schema.createTable('message_clone', function (table) {
-            table.string('guild_id', 20).notNullable();
-            table.string('channel_id', 20).notNullable();
-            table.string('message_id', 20).notNullable();
-            table.primary(['guild_id', 'channel_id', 'message_id']);
-            
-            table.string('sync_group_id', 20).notNullable();
-            table.foreign('sync_group_id', 'channel_clone_sync_group_fk')
-                .references('sync_group_id')
-                .inTable('sync_group');
-            
-            table.string('orig_guild_id', 20).notNullable();
-            table.string('orig_channel_id', 20).notNullable();
-            table.string('orig_message_id', 20).notNullable();
-            table.foreign(['orig_guild_id', 'orig_channel_id', 'orig_message_id'], 'message_clone_message_fk')
-                .references(['guild_id','channel_id','message_id'])
-                .inTable('message');
-            
-            table.timestamps();
-        }).then(console.log('Created Table: message_clone'));
-    }
-});
+//knex.schema.hasTable('message_clone').then(function(exists) {
+//    if (!exists) {
+//        knex.schema.createTable('message_clone', function (table) {
+//            table.string('message_id', 20).notNullable();
+//            table.primary(['message_id']);
+//            
+//            table.string('channel_id', 20).notNullable();
+//            table.string('guild_id', 20).notNullable();
+//            
+//            table.string('sync_group_id', 20).notNullable();
+//            table.foreign('sync_group_id', 'channel_clone_sync_group_fk')
+//                .references('sync_group_id')
+//                .inTable('sync_group');
+//            
+//            table.string('orig_guild_id', 20).notNullable();
+//            table.string('orig_channel_id', 20).notNullable();
+//            table.string('orig_message_id', 20).notNullable();
+//            table.foreign(['orig_guild_id', 'orig_channel_id', 'orig_message_id'], 'message_clone_message_fk')
+//                .references(['guild_id','channel_id','message_id'])
+//                .inTable('message');
+//            
+//            table.timestamps(false, true);
+//        }).then(client.logger.log('Created Table: message_clone'));
+//    }
+//});
 
 //return;
 
@@ -112,8 +147,6 @@ knex.schema.hasTable('message_clone').then(function(exists) {
 //
 //     console.log('Connected to the dadabase.');
 // });
-
-const client = require('./modules/Client.js');
 
 // We're doing real fancy node 8 async/await stuff here, and to do that
 // we need to wrap stuff in an anonymous function. It's annoying but it works.
@@ -146,7 +179,7 @@ const init = async () => {
         // Bind the client to any event, before the existing arguments
         // provided by the discord.js event. 
         // This line is awesome by the way. Just saying.
-        client.on(eventName, event.bind(null, client));
+        client.on(eventName, event.bind(null));
     });
     
     // Generate a cache of client permissions for pretty perm names in commands.
