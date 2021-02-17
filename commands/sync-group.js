@@ -13,8 +13,8 @@ exports.conf = conf;
 const help = {
     name: 'sync-group',
     category: 'Message Syncronization',
-    description: 'Sync Group administration command',
-    usage: 'sync-group <add-stuff-here>'
+    description: 'Synchronization group administration command',
+    usage: 'sync-group <action> <args>'
 };
 exports.help = help;
 

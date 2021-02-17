@@ -5,16 +5,16 @@ const client = require('../modules/Client.js'); // eslint-disable-line no-unused
 const conf = {
     enabled: true,
     guildOnly: false,
-    aliases: ['sc'],
-    permLevel: 'User'
+    aliases: ['act'],
+    permLevel: "User"
 };
 exports.conf = conf;
 
 const help = {
-    name: 'sync-channel',
-    category: 'Message Syncronization',
-    description: 'Synchronization channel administration command',
-    usage: 'sync-command <action> <args>'
+    name: 'activity',
+    category: 'Activity Administration',
+    description: 'Activity administration command',
+    usage: 'activity <action> <args>'
 };
 exports.help = help;
 

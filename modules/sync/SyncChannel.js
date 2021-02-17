@@ -1,6 +1,7 @@
 
 // Load our classes
 const DuplicateError = require('../error/DuplicateError');
+const BaseModel = require('../BaseModel.js');
 
 // Load singletons
 const client = require('../Client.js'); // eslint-disable-line no-unused-vars
@@ -9,9 +10,6 @@ const client = require('../Client.js'); // eslint-disable-line no-unused-vars
 const http_post   = require('../functions').http_post;
 const http_patch  = require('../functions').http_patch;
 const http_delete = require('../functions').http_delete;
-
-// Load our classes
-const BaseModel = require('../BaseModel.js');
 
 class SyncChannel extends BaseModel {
     static tableName = 'channel';

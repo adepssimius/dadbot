@@ -2,9 +2,14 @@
 // Load our classes
 const BaseModel        = require('../BaseModel.js');
 const DuplicateError   = require('../error/DuplicateError');
+const Snowflake        = require('../Snowflake');
 
 // Load singletons
 const client           = require('../Client.js'); // eslint-disable-line no-unused-vars
+
+//
+// TODO - Clean up confusing usage of name vs sync_group_name
+//
 
 class SyncGroup extends BaseModel {
     static tableName = 'sync_group';
@@ -47,7 +52,7 @@ class SyncGroup extends BaseModel {
             throw new DuplicateError(`There is already a channel synchronization group called '${data.name}'`);
         }
         
-        data.sync_group_id = data.name;
+        data.sync_group_id = Snowflake.generate();
         let result = await this._create(data); // eslint-disable-line no-unused-vars
         return new SyncGroup(data);
     }
@@ -57,7 +62,7 @@ class SyncGroup extends BaseModel {
     // ******************** //
     
     async delete() {
-        return await SyncGroup._delete({sync_group_id: this.name});
+        return await SyncGroup._delete({sync_group_id: this.sync_group_id});
     }
 }
 

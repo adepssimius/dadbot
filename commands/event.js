@@ -5,16 +5,16 @@ const client = require('../modules/Client.js'); // eslint-disable-line no-unused
 const conf = {
     enabled: true,
     guildOnly: false,
-    aliases: [],
+    aliases: ['lfg'],
     permLevel: "User"
 };
 exports.conf = conf;
 
 const help = {
-    name: 'lfg',
-    category: 'Activity Coordination',
-    description: 'Looking for group command',
-    usage: 'lfg <add-stuff-here>'
+    name: 'event',
+    category: 'Event Coordination',
+    description: 'Event coordination (lfg) command',
+    usage: 'event|lfg <action> <args>'
 };
 exports.help = help;
 

@@ -1,8 +1,12 @@
 
 const Discord = require('discord.js');
+const Logger  = require('./Logger');
 
+// Create a new Discord client
 const client = new Discord.Client();
-client.logger = require('./Logger');
+
+// Add the logger
+client.logger = Logger;
 
 // Add Collections for commands and aliases
 client.commands = new Discord.Collection();
