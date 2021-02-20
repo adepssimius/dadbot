@@ -1,7 +1,6 @@
 
 // Load our classes
-const Activity         = require('../../modules/event/Activity');
-const ActivityCategory = require('../../modules/event/ActivityCategory');
+const Activity = require('../../modules/event/Activity');
 
 // Load external classes
 const Discord = require('discord.js');

@@ -3,6 +3,10 @@
 const Activity         = require('../../modules/event/Activity');
 const ActivityCategory = require('../../modules/event/ActivityCategory');
 const DuplicateError   = require('../../modules/error/DuplicateError');
+const EmojiMap         = require('../../modules/EmojiMap.js');
+
+// Load external classes
+const Discord = require('discord.js');
 
 // Load singletons
 const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
@@ -24,78 +28,167 @@ const help = {
 };
 exports.help = help;
 
+
 const run = async (message, args, level) => {
-    const filter = nextMessage => {
-        return nextMessage.author.id == message.author.id;
-    };
+    const data = {creator_id: message.author.id};
     
-    //const collector = message.channel.createMessageCollector(filter, { time: 60000 });
-    const collector = message.channel.createMessageCollector(filter);
-    const steps = ['name', 'abbreviation', 'category', 'fireteam_size', 'estimated_mins'];
-    
-    const wipArg = {
-        'collector': collector,
-        'data': {creator_id: message.author.id},
-        'step': steps.shift(),
-        'stepsLeft': steps
-    };
-    
-    await message.reply(`What name do you want to give this activity?`);
-    
-    collector.on('collect', async function(nextMessage, wip = wipArg) {
-        switch (wip.step) {
-            case 'name':
-                wip.data.activity_name = nextMessage.content;
-                wip.step = wip.stepsLeft.shift();
+    const steps = [
+        {
+            name: 'activity_name',
+            prompt: async (message, nextMessage) => await message.channel.send(`What is the name of this activity?`),
+            onCollect: async (message, nextMessage) => {
+                data.activity_name = nextMessage.content;
+                steps.shift();
+            }
+        }, {
+            name: 'activity_abbr',
+            prompt: async (message, nextMessage) => await message.channel.send(`What is the abbreviation for this activity?`),
+            onCollect: async (message, nextMessage) => {
+                data.activity_abbr = nextMessage.content;
+                steps.shift();
+            }
+        }, {
+            name: 'category_id',
+            prompt: async (message, nextMessage) => {
+                const emojiMap = new Map();
+                let options = '';
                 
-                await nextMessage.reply(`How do you want to abbreviate this activity?`);
-                break;
-            
-            case 'abbreviation':
-                wip.data.activity_abbr = nextMessage.content;
-                wip.step = wip.stepsLeft.shift();
+                // Build the emoji -> activity category map
+                const activityCategories = await ActivityCategory.get();
                 
-                await nextMessage.reply(`To which activity category do you want to assign this activity?`);
-                break;
-                
-            case 'category':
-                const activityCategories = await ActivityCategory.getByNameOrAbbr({
-                    category_name: nextMessage.content,
-                    category_abbr: nextMessage.content
-                });
-                
-                if (activityCategories.length == 0) {
-                    nextMessage.reply('Unrecognized activity category, please try again!');
-                    return;
-                } else if (activityCategories.length > 1) {
-                    nextMessage.reply('You matched more then one activity category, please try again!');
-                    return;
+                for (let x = 0; x < activityCategories.length; x++) {
+                    const activityCategory = activityCategories[x];
+                    const emoji = EmojiMap.get(activityCategory.category_abbr);
+                    emojiMap.set(emoji, activityCategory);
+                    options += `${emoji} - ${activityCategory.category_name}\n`; 
                 }
                 
-                wip.data.category_id = activityCategories[0].category_id;
-                wip.step = wip.stepsLeft.shift();
+                // Send thee prompt
+                await message.channel.send(`What activity category do you want to assign to this activity? You can choose a reaction or respond via text.`);
+                const embed = new Discord.MessageEmbed().addFields({name: 'Activity Categories', value: options.trim()});
+                const replyMessage = await message.channel.send(embed);
                 
-                await nextMessage.reply(`What is the size of the fireteam for this activity`);
-                break;
+                // Apply the reaction
+                for (let emoji of emojiMap.keys()) {
+                    replyMessage.react(emoji);
+                }
                 
-            case 'fireteam_size':
-                wip.data.fireteam_size = nextMessage.content;
-                wip.step = wip.stepsLeft.shift();
+                wip.reactionCollector = replyMessage.createReactionCollector(async (reaction, user) => {
+                    return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
+                });
                 
-                await nextMessage.reply(`How many minutes do you estimate this activity to take to complete?`);
-                break;
+                wip.reactionCollector.on('collect', async (reaction, user) => {
+                    const activityCategory = emojiMap.get(reaction.emoji.name);
+                    if (activityCategory != null) {
+                        await wip.reactionCollector.stop();
+                        wip.reactionCollector = null;
+                        
+                        data.category_id = activityCategory.category_id;
+                        steps.shift();
+                        
+                        // Since we are in a reaction collector, we need to do this manually
+                        await steps[0].prompt(message, nextMessage);
+                    }
+                });
+            },
+            onCollect: async (message, nextMessage) => {
+                const activityCategories = await ActivityCategory.getByNameOrAbbr({
+                    category_name: nextMessage.content,
+                    category_abbr: nextMessage.content}
+                );
                 
-            case 'estimated_mins':
-                wip.data.estimated_mins = nextMessage.content;
-                wip.step = wip.stepsLeft.shift();
-                break;
+                if (activityCategories.length == 0) {
+                    await message.channel.send(`Activity category not found: ${nextMessage.content}`);
+                } else if (activityCategories.length > 1) {
+                    await message.channel.send(`Multiple activity categories found: ${nextMessage.content}`);
+                } else {
+                    wip.reactionCollector.stop();
+                    wip.reactionCollector = null;
+                    
+                    const activityCategory = activityCategories[0];
+                    data.category_id = activityCategory.category_id;
+                    steps.shift();
+                }
+            }
+        }, {
+            name: 'fireteam_size',
+            prompt: async (message, nextMessage) => {
+                const emojiMap = new Map();
+                
+                // Build the emoji -> activity category map
+                const fireteamSizes = [1,2,3,4,5,6];
+                
+                const replyMessage = await message.channel.send(`What maximum fireteam size do you want to set for this activity?`);
+                for (let x = 0; x < fireteamSizes.length; x++) {
+                    const fireteamSize = fireteamSizes[x];
+                    const emoji = EmojiMap.get(fireteamSize);
+                    emojiMap.set(emoji, fireteamSize);
+                    replyMessage.react(emoji);
+                }
+                
+                const emojiFilter = (reaction, user) => {
+                    return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
+                };
+                
+                const reactionCollector = await replyMessage.createReactionCollector(emojiFilter);
+                wip.reactionCollector = reactionCollector;
+                
+                reactionCollector.on('collect', async (reaction, user) => {
+                    const fireteamSize = emojiMap.get(reaction.emoji.name);
+                    if (fireteamSize != null) {
+                        wip.reactionCollector.stop();
+                        wip.reactionCollector = null;
+                        
+                        data.fireteam_size = fireteamSize;
+                        steps.shift();
+                        
+                        // Since we are in a reaction collector, we need to do this manually
+                        steps[0].prompt(message, nextMessage);
+                    }
+                });
+            },
+            onCollect: async (message, nextMessage) => {
+                wip.reactionCollector.stop();
+                wip.reactionCollector = null;
+                
+                data.fireteam_size = nextMessage.content;
+                steps.shift();
+            }
+        }, {
+            name: 'estimated_mins',
+            prompt: async (message, nextMessage) => message.channel.send(`What is the expected direction (in minutes) of this activity?`),
+            onCollect: async (message, nextMessage) => {
+                data.estimated_mins = nextMessage.content;
+                steps.shift();
+            }
         }
+    ];
+    
+    // Check if the activity name was given as an argument
+    if (args.length > 0) {
+        const name = args.join(' ');
+        data.activity_name = name;
+        steps.shift(); // Skip the name collection step
+    }
+    
+    const wip = {};
+    await steps[0].prompt(message);
+    
+    wip.collector = message.channel.createMessageCollector(nextMessage => {
+        return nextMessage.author.id == message.author.id;
+    });
+
+    wip.collector.on('collect', async function(nextMessage) { //, wip = wipArg) {
+        await steps[0].onCollect(message, nextMessage);
         
-        if (wip.step == null) {
-	        wip.collector.stop();
-	            
+        if (steps.length > 0) {
+            await steps[0].prompt(message, nextMessage);
+        } else {
+            wip.collector.stop();
+            wip.collector = null;
+            	            
             try {
-                const activity = await Activity.create(wip.data);
+                const activity = await Activity.create(data);
                 await message.channel.send(`Activity created`);
                 
                 client.logger.debug('Activity Created:');
@@ -103,41 +196,13 @@ const run = async (message, args, level) => {
             
             } catch (error) {
                 if (error instanceof DuplicateError) {
-                    client.replyWithError(error.message, message);
+                    await client.replyWithError(error.message, message);
                 } else {
-                    const label = `${wip.data.activity_name} [${wip.data.activity_abbr}]`;
-                    client.replyWithErrorAndDM(`Creation of activity failed: ${label}`, message, error);
+                    const label = `${data.activity_name} [${data.activity_abbr}]`;
+                    await client.replyWithErrorAndDM(`Creation of activity failed: ${label}`, message, error);
                 }
             }
         }
     });
-    
-    //collector.on('end', async function(collected, user, wip = wipArg) {
-    //    
-    //});
-    
-    //if (args.length != 1) {
-    //    message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-    //    return;
-    //}
-    //
-    //const name = args[0];
-    //try {
-    //    const syncGroup = await SyncGroup.create({name: name});
-    //    message.channel.send(`Created sync group: ${name}`);
-    //    
-    //    client.logger.debug('Sync Group:');
-    //    client.logger.dump(syncGroup);
-    //} catch (error) {
-    //    if (error instanceof DuplicateError) {
-    //        message.channel.send(error.message);
-    //        return;
-    //    } else {
-    //        const details = `Error creating synchronization group '${name}'`;
-    //        message.channel.send(details);
-    //        client.logger.error(details);
-    //        client.logger.dump(error);
-    //    }
-    //}
 };
 exports.run = run;
