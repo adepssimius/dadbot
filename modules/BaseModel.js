@@ -5,6 +5,7 @@ const knex = require('./Database.js');
 
 class BaseModel {
     static tableName = null;
+    static orderBy   = 'created_at';
     
     constructor(data) {
         if (data == null) {
@@ -14,9 +15,9 @@ class BaseModel {
 		this.data = data;
     }
     
-    // ********************* //
-    // * Getters & Setters * //
-    // ********************* //
+    // ************ //
+    // * Getters  * //
+    // ************ //
     
     get created_at() {
         return this.data.created_at;
@@ -26,13 +27,21 @@ class BaseModel {
         return this.data.updated_at;
     }
     
+    // *********** //
+    // * Setters * //
+    // ********** //
+    
+    set created_at(value) {
+        throw new Error('Cowardly refusing to change created_at!');
+    }
+    
+    set updated_at(value) {
+        this.data.updated_at = value;
+    }
+    
     // ***************** //
     // * Class Methods * //
     // ***************** //
-    
-    static getTableName() {
-        return this.tableName;
-    }
     
     static get(conditions) {
         return null;
@@ -40,13 +49,15 @@ class BaseModel {
     
     static async _get(conditions) {
         if (conditions != null) {
-            return await knex(this.getTableName())
+            return await knex(this.tableName)
                 .where(conditions)
+                .orderBy(this.orderBy)
                 .then(function(rows) {
                     return rows;
                 });
         } else {
-            return await knex(this.getTableName())
+            return await knex(this.tableName)
+                .orderBy(this.orderBy)
                 .then(function(rows) {
                     return rows;
                 });
@@ -58,16 +69,20 @@ class BaseModel {
     }
     
     static async _create(data) {
-        return await knex(this.getTableName())
+        const timestamp = knex.fn.now();
+        data.created_at = timestamp;
+        data.updated_at = timestamp;
+        
+        return await knex(this.tableName)
             .insert(data)
             .then(function(result) {
                 return result;
             });
     }
     
-    static async _delete(conditions) {
-        return await knex(this.getTableName())
-            .where(conditions)
+    static async _delete(query) {
+        return await knex(this.tableName)
+            .where(query)
             .delete()
             .then(result => {
                 return result;

@@ -6,17 +6,19 @@ const Snowflake      = require('../Snowflake');
 
 // Load singletons
 const client = require('../Client.js'); // eslint-disable-line no-unused-vars
+const knex   = require('../Database.js');
 
 class ActivityCategory extends BaseModel {
     static tableName = 'activity_category';
+    static orderBy   = 'category_name';
     
     constructor(data) {
         super(data);
     }
     
-    // ********************* //
-    // * Getters & Setters * //
-    // ********************* //
+    // *********** //
+    // * Getters * //
+    // *********** //
     
     get category_id() {
         return this.data.category_id;
@@ -34,9 +36,31 @@ class ActivityCategory extends BaseModel {
         return this.data.creator_id;
     }
     
+    // *********** //
+    // * Setters * //
+    // *********** //
+    
+    set category_id(value) {
+        this.data.category_id = value;
+    }
+    
+    set category_name(value) {
+        this.data.category_name = value;
+    }
+    
+    set category_abbr(value) {
+        this.data.category_abbr = value;
+    }
+    
+    set creator_id(value) {
+        this.data.creator_id = value;
+    }
+    
     // ***************** //
     // * Class Methods * //
     // ***************** //
+    
+    // Standard get and create functions
     
     static async get(whereClause) {
         let result = [];
@@ -50,23 +74,54 @@ class ActivityCategory extends BaseModel {
     }
     
     static async create(data) {
-        const activityCategories = await ActivityCategory.get(data);
-        
+        const activityCategories = await ActivityCategory.getByNameOrAbbr(data);
         if (activityCategories.length > 0) {
-            throw new DuplicateError(`There is already an activity category called '${data.category_name}'`);
+            const activityCategory = activityCategories[0];
+            throw new DuplicateError(`Existing category found with the same name or abbreviation: [${activityCategory.category_abbr}] ${activityCategory.category_name}`);
         }
         
         data.category_id = Snowflake.generate();
-        let result = await this._create(data); // eslint-disable-line no-unused-vars
+        const result = await this._create(data); // eslint-disable-line no-unused-vars
         return new ActivityCategory(data);
+    }
+    
+    // Extra functions for this class
+    
+    static async getByNameOrAbbr(data) {
+        return await ActivityCategory.get( (query) =>
+            query.where('category_name', data.category_name).orWhere('category_abbr', data.category_abbr)
+        );
     }
     
     // ******************** //
     // * Instance Methods * //
     // ******************** //
     
+    async update() {
+        this.updated_at = knex.fn.now();
+        
+        let data = {
+            category_name: this.category_name,
+            category_abbr: this.category_abbr,
+            updated_at: this.updated_at
+        };
+        
+        let rowsChanged = await knex(ActivityCategory.tableName)
+            .where('category_id', this.category_id)
+            .update(data)
+            .then(result => {
+                return result;
+            });
+        
+        if (rowsChanged == 0) {
+            throw new Error('Update did not change any records!');
+        } else if (rowsChanged > 1) {
+            throw new Error('Update changed more then one record!');
+        }
+    }
+    
     async delete() {
-        return await ActivityCategory._delete({category_id: this.category_id});
+        return await ActivityCategory._delete({category_name: this.category_name});
     }
 }
 

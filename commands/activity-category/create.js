@@ -1,6 +1,7 @@
 
 // Load our classes
-const DuplicateError = require('../../modules/error/DuplicateError');
+const ActivityCategory = require('../../modules/event/ActivityCategory');
+const DuplicateError   = require('../../modules/error/DuplicateError');
 
 // Load singletons
 const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
@@ -18,35 +19,39 @@ const help = {
     name: 'create',
     category: 'Activity Category Administration',
     description: '',
-    usage: 'activity-category create <group-name>'
+    usage: 'activity-category create <abbreviation> <name>'
 };
 exports.help = help;
 
 const run = async (message, args, level) => {
-    //if (args.length != 1) {
-    //    message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-    //    return;
-    //}
+    if (args.length < 2) {
+        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
+        return;
+    }
     
+    const abbr = args.shift();
+    const name = args.join(' ');
     
+    const data = {
+        category_name: name,
+        category_abbr: abbr,
+        creator_id: message.author.id
+    };
     
-    //const name = args[0];
-    //try {
-    //    const syncGroup = await SyncGroup.create({name: name});
-    //    message.channel.send(`Created sync group: ${name}`);
-    //    
-    //    client.logger.debug('Sync Group:');
-    //    client.logger.dump(syncGroup);
-    //} catch (error) {
-    //    if (error instanceof DuplicateError) {
-    //        message.channel.send(error.message);
-    //        return;
-    //    } else {
-    //        const details = `Error creating synchronization group '${name}'`;
-    //        message.channel.send(details);
-    //        client.logger.error(details);
-    //        client.logger.dump(error);
-    //    }
-    //}
+    try {
+        const activityCategory = await ActivityCategory.create(data);
+        message.channel.send(`Activity category created`);
+        
+        client.logger.debug('Activity Category:');
+        client.logger.dump(activityCategory);
+    
+    } catch (error) {
+        if (error instanceof DuplicateError) {
+            client.replyWithError(error.message, message);
+        } else {
+            const label = `${data.category_name} [${data.category_abbr}]`;
+            client.replyWithErrorAndDM(`Creation of activity category failed: ${label}`, message, error);
+        }
+    }
 };
 exports.run = run;

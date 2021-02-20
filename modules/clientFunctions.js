@@ -202,5 +202,23 @@ module.exports = (client) => {
         
         return permlevel;
     };
-      
-}
+    
+    client.replyWithError = async (oops, message) => {
+        message.channel.send(`**ERROR**: ${oops}`);
+    };
+    
+    client.replyWithErrorAndDM = async (oops, message, error) => {
+        message.channel.send(`**ERROR**: ${oops}`);
+        
+        //await message.author.send(`**ERROR**: ${oops}`);
+        //await message.author.send(error.message);
+        //await message.author.send(error.stack);
+        
+        message.author.send(`**ERROR**: ${oops}`)
+            .then(message.author.send(error.message)
+                .then(message.author.send(error.stack)));
+        
+        client.logger.error(oops);
+        client.logger.dump(error);
+    };
+};

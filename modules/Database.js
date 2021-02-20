@@ -169,7 +169,7 @@ knex.schema.hasTable('activity').then(function(exists) {
             table.string ('activity_name', 32).notNullable();
             table.string ('activity_abbr', 16).notNullable();
             table.string ('category_id', 20).notNullable();
-            table.integer('max_guardians').notNullable();
+            table.integer('fireteam_size').notNullable();
             table.integer('estimated_mins').notNullable();
             table.string ('creator_id', 20).notNullable();
             table.timestamps(false, true);
@@ -202,7 +202,7 @@ knex.schema.hasTable('event').then(function(exists) {
             table.string   ('guild_id', 20).notNullable();
             table.string   ('description', 256);
             table.timestamp('start_time').notNullable();
-            table.integer  ('max_guardians').notNullable();
+            table.integer  ('fireteam_size').notNullable();
             table.integer  ('estimated_mins').notNullable();
             table.boolean  ('is_private').notNullable();
             table.boolean  ('auto_delete').notNullable();
