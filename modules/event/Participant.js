@@ -1,10 +1,13 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const BaseModel      = require('../BaseModel.js');
-const DuplicateError = require('../error/DuplicateError');
+const BaseModel      = require(`${ROOT}/modules/BaseModel`);
+const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
-const client = require('../Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 class Participant extends BaseModel {
     static tableName = 'event';

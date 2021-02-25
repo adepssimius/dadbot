@@ -1,13 +1,16 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const ActivityCategory = require('./ActivityCategory.js');
-const BaseModel        = require('../BaseModel.js');
-const DuplicateError   = require('../error/DuplicateError');
-const Snowflake        = require('../Snowflake');
+const ActivityAlias    = require(`${ROOT}/modules/event/ActivityAlias`);
+const BaseModel        = require(`${ROOT}/modules/BaseModel`);
+const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
+const Snowflake        = require(`${ROOT}/modules/Snowflake`);
 
 // Load singletons
-const client = require('../Client.js'); // eslint-disable-line no-unused-vars
-const knex   = require('../Database.js');
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
+const knex   = require(`${ROOT}/modules/Database`);
 
 class Activity extends BaseModel {
     static tableName = 'activity';
@@ -29,10 +32,6 @@ class Activity extends BaseModel {
         return this.data.activity_name;
     }
     
-    get activity_abbr() {
-        return this.data.activity_abbr;
-    }
-    
     get category_id() {
         return this.data.category_id;
     }
@@ -41,8 +40,8 @@ class Activity extends BaseModel {
         return this.data.fireteam_size;
     }
 
-    get estimated_mins() {
-        return this.data.estimated_mins;
+    get est_max_duration() {
+        return this.data.est_max_duration;
     }
 
     get creator_id() {
@@ -61,10 +60,6 @@ class Activity extends BaseModel {
         this.data.activity_name = value;
     }
     
-    set activity_abbr(value) {
-        this.data.activity_abbr = value;
-    }
-    
     set category_id(value) {
         this.data.category_id = value;
     }
@@ -73,8 +68,8 @@ class Activity extends BaseModel {
         this.data.fireteam_size = value;
     }
 
-    set estimated_mins(value) {
-        this.data.estimated_mins = value;
+    set est_max_duration(value) {
+        this.data.est_max_duration = value;
     }
 
     set creator_id(value) {
@@ -99,11 +94,11 @@ class Activity extends BaseModel {
     }
     
     static async create(data) {
-        const activities = await Activity.getByNameOrAbbr(data);
+        const activities = await Activity.get(data);
         
         if (activities.length > 0) {
             const activity = activities[0];
-            throw new DuplicateError(`Existing activity found with the same name or abbreviation: [${activity.activity_abbr}] ${activity.activity_name}`);
+            throw new DuplicateError(`Existing activity found with the same name [${activity.activity_abbr}] ${activity.activity_name}`);
         }
         
         data.activity_id = Snowflake.generate();
@@ -113,9 +108,12 @@ class Activity extends BaseModel {
     
     // Extra functions for this class
     
-    static async getByNameOrAbbr(data) {
+    static async getByNameOrAlias(data) {
         return await Activity.get( (query) =>
-            query.where('activity_name', data.activity_name).orWhere('activity_abbr', data.activity_abbr)
+            query.where('activity_name', data.activity_name)
+                .orWhereIn('activity_id', function() {
+                    this.select('activity_id').from(ActivityAlias.tableName).where('alias', data.alias);
+                })
         );
     }
     
@@ -128,10 +126,9 @@ class Activity extends BaseModel {
         
         let data = {
             activity_name: this.activity_name,
-            activity_abbr: this.activity_abbr,
             category_id: this.category_id,
             fireteam_size: this.fireteam_size,
-            estimated_mins: this.estimated_mins,
+            est_max_duration: this.est_max_duration,
             creator_id: this.creator_id,
             updated_at: this.updated_at
         };
@@ -151,11 +148,18 @@ class Activity extends BaseModel {
     }
     
     async delete() {
+        const activityAliases = ActivityAlias.get({activity_id: this.activity_id});
+        
+        for (let x = 0; x < activityAliases.length; x++) {
+            await activityAliases[x].delete();
+        }
+        
         return await Activity._delete({activity_id: this.activity_id});
     }
     
     async getActivityCategory() {
-        const activityCategories = await ActivityCategory.get({'category_id': this.category_id});
+        const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+        const activityCategories = await ActivityCategory.get({category_id: this.category_id});
         
         if (activityCategories.length == 0) {
             throw new Error(`Unexpectedly did not find an activity category for category_id = '${this.category_id}'`);
@@ -164,6 +168,11 @@ class Activity extends BaseModel {
         }
         
         return activityCategories[0];
+    }
+    
+    async getActivityAliases() {
+        const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
+        return await ActivityAlias.get({activity_id: this.activity_id});
     }
 }
 

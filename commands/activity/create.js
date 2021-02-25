@@ -1,21 +1,24 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const Activity         = require('../../modules/event/Activity');
-const ActivityCategory = require('../../modules/event/ActivityCategory');
-const DuplicateError   = require('../../modules/error/DuplicateError');
-const EmojiMap         = require('../../modules/EmojiMap.js');
+const Activity         = require(`${ROOT}/modules/event/Activity`);
+const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
+const EmojiMap         = require(`${ROOT}/modules/EmojiMap`);
 
 // Load external classes
 const Discord = require('discord.js');
 
 // Load singletons
-const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
     guildOnly: false,
     aliases: [],
-    permLevel: 'User'
+    permLevel: 'admin'
 };
 exports.conf = conf;
 
@@ -40,13 +43,13 @@ const run = async (message, args, level) => {
                 data.activity_name = nextMessage.content;
                 steps.shift();
             }
-        }, {
-            name: 'activity_abbr',
-            prompt: async (message, nextMessage) => await message.channel.send(`What is the abbreviation for this activity?`),
-            onCollect: async (message, nextMessage) => {
-                data.activity_abbr = nextMessage.content;
-                steps.shift();
-            }
+        //}, {
+        //    name: 'activity_abbr',
+        //    prompt: async (message, nextMessage) => await message.channel.send(`What is the abbreviation for this activity?`),
+        //    onCollect: async (message, nextMessage) => {
+        //        data.activity_abbr = nextMessage.content;
+        //        steps.shift();
+        //    }
         }, {
             name: 'category_id',
             prompt: async (message, nextMessage) => {
@@ -58,7 +61,7 @@ const run = async (message, args, level) => {
                 
                 for (let x = 0; x < activityCategories.length; x++) {
                     const activityCategory = activityCategories[x];
-                    const emoji = EmojiMap.get(activityCategory.category_abbr);
+                    const emoji = EmojiMap.get(activityCategory.symbol);
                     emojiMap.set(emoji, activityCategory);
                     options += `${emoji} - ${activityCategory.category_name}\n`; 
                 }
@@ -92,9 +95,9 @@ const run = async (message, args, level) => {
                 });
             },
             onCollect: async (message, nextMessage) => {
-                const activityCategories = await ActivityCategory.getByNameOrAbbr({
+                const activityCategories = await ActivityCategory.getByNameOrSymbol({
                     category_name: nextMessage.content,
-                    category_abbr: nextMessage.content}
+                    symbol: nextMessage.content}
                 );
                 
                 if (activityCategories.length == 0) {
@@ -155,10 +158,10 @@ const run = async (message, args, level) => {
                 steps.shift();
             }
         }, {
-            name: 'estimated_mins',
-            prompt: async (message, nextMessage) => message.channel.send(`What is the expected direction (in minutes) of this activity?`),
+            name: 'est_max_duration',
+            prompt: async (message, nextMessage) => message.channel.send(`What is the estimated maximum direction (in minutes) of this activity?`),
             onCollect: async (message, nextMessage) => {
-                data.estimated_mins = nextMessage.content;
+                data.est_max_duration = nextMessage.content;
                 steps.shift();
             }
         }
@@ -178,7 +181,7 @@ const run = async (message, args, level) => {
         return nextMessage.author.id == message.author.id;
     });
 
-    wip.collector.on('collect', async function(nextMessage) { //, wip = wipArg) {
+    wip.collector.on('collect', async function(nextMessage) {
         await steps[0].onCollect(message, nextMessage);
         
         if (steps.length > 0) {
@@ -198,8 +201,7 @@ const run = async (message, args, level) => {
                 if (error instanceof DuplicateError) {
                     await client.replyWithError(error.message, message);
                 } else {
-                    const label = `${data.activity_name} [${data.activity_abbr}]`;
-                    await client.replyWithErrorAndDM(`Creation of activity failed: ${label}`, message, error);
+                    await client.replyWithErrorAndDM(`Creation of activity failed: ${data.activity_name}`, message, error);
                 }
             }
         }

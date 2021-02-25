@@ -1,6 +1,9 @@
 
+// Determine our place in the world
+const ROOT = '..';
+
 // Load external classes
-const chalk = require('chalk');
+const chalk  = require('chalk');
 const moment = require('moment');
 
 exports.log = (content, type = 'log') => {

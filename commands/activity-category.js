@@ -1,12 +1,15 @@
 
+// Determine our place in the world
+const ROOT = '..';
+
 // Load singletons
-const client = require('../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
     guildOnly: false,
     aliases: ['acc','category','cat'],
-    permLevel: "User"
+    permLevel: 'viewer'
 };
 exports.conf = conf;
 

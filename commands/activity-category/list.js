@@ -1,15 +1,18 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const ActivityCategory = require('../../modules/event/ActivityCategory');
+const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
 
 // Load singletons
-const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
     guildOnly: false,
     aliases: [],
-    permLevel: 'User'
+    permLevel: null
 };
 exports.conf = conf;
 
@@ -36,11 +39,14 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     } else {
         response += 'category';
     }
-    response += ':';
     
-    for (let x = 0; x < activityCategories.length; x++) {
-        const activityCategory = activityCategories[x];
-        response += `\n   ${x+1}. ${activityCategory.category_name} [${activityCategory.category_abbr}]`;
+    if (activityCategories.length > 0) {
+        const categoryListElements = [];
+        for (let x = 0; x < activityCategories.length; x++) {
+            const activityCategory = activityCategories[x];
+            categoryListElements.push(`[${activityCategory.symbol}] ${activityCategory.category_name}`);
+        }
+        response += '```' + categoryListElements.join('\n') + '```';
     }
     
     message.channel.send(response);

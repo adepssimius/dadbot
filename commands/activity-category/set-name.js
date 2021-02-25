@@ -1,15 +1,18 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const ActivityCategory = require('../../modules/event/ActivityCategory');
+const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
 
 // Load singletons
-const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
     guildOnly: false,
     aliases: [],
-    permLevel: 'User'
+    permLevel: 'admin'
 };
 exports.conf = conf;
 
@@ -18,7 +21,7 @@ const help = {
     name: 'set-name',
     category: 'Activity Category Administration',
     description: 'Change the name of an activity category',
-    usage: 'activity-category set-name <abbreviation> <name>'
+    usage: 'activity-category set-name <symbol> <name>'
 };
 exports.help = help;
 
@@ -28,12 +31,12 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         return;
     }
     
-    const abbr = args.shift();
-    const name = args.join(' ');
+    const symbol = args.shift();
+    const name   = args.join(' ');
     
-    let activityCategories = await ActivityCategory.get({category_abbr: abbr});
+    let activityCategories = await ActivityCategory.get({symbol: symbol});
     if (activityCategories.length == 0) {
-        message.channel.send(`Could not find activity category: '${abbr}'`);
+        message.channel.send(`Could not find activity category: '${symbol}'`);
         return;
     }
     
@@ -41,11 +44,11 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     activityCategory.category_name = name;
     
     try {
-        activityCategory.update();
+        await activityCategory.update();
         message.channel.send(`Activity category name updated`);
     
     } catch (error) {
-        const label = `${activityCategory.category_name} [${activityCategory.category_abbr}]`;
+        const label = `${activityCategory.category_name} [${activityCategory.symbol}]`;
         client.replyWithErrorAndDM(`Update of activity category name failed: ${label}`, message, error);
     }
 };

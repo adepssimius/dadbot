@@ -1,18 +1,21 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const Activity = require('../../modules/event/Activity');
+const Activity = require(`${ROOT}/modules/event/Activity`);
 
 // Load external classes
 const Discord = require('discord.js');
 
 // Load singletons
-const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
     guildOnly: false,
     aliases: [],
-    permLevel: 'User'
+    permLevel: null
 };
 exports.conf = conf;
 
@@ -32,7 +35,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     }
     
     const value = args.join(' ');
-    let activities = await Activity.getByNameOrAbbr({activity_name: value, activity_abbr: value});
+    let activities = await Activity.getByNameOrAlias({activity_name: value, alias: value});
     
     if (activities.length == 0) {
         message.channel.send(`Could not find activity: '${value}'`);
@@ -41,19 +44,26 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     
     const activity = activities[0];
     const activityCategory = await activity.getActivityCategory();
+    const activityAliases = await activity.getActivityAliases();
     
     //
     // TODO - Make this prettier
     //
     
+    const aliases = [];
+    for (let x = 0; x < activityAliases.length; x++) {
+        aliases.push(activityAliases[x].alias);
+    }
+    const aliasList = ( activityAliases.length > 0 ? aliases.join(', ') : 'none' );
+    
     const embed = new Discord.MessageEmbed()
         .setTitle('Activity Category')
         .addFields(
             { name: 'Activity Name', value: activity.activity_name },
-            { name: 'Activity Abbreviation', value: activity.activity_abbr },
-            { name: 'Activity Category', value: `${activityCategory.category_name} [${activityCategory.category_abbr}]` },
-            { name: 'Fireteam Size', value: activity.fireteam_size },
-            { name: 'Estimated Duration', value: `${activity.estimated_mins} minutes` }
+            { name: 'Activity Alias', value: aliasList },
+            { name: 'Activity Category', value: `${activityCategory.category_name} [${activityCategory.symbol}]` },
+            { name: 'Maximum Fireteam Size', value: activity.fireteam_size },
+            { name: 'Estimated Maximum Duration', value: `${activity.est_max_duration} minutes` }
         );
     message.channel.send(embed);
 };

@@ -1,4 +1,7 @@
 
+// Determine our place in the world
+const ROOT = '..';
+
 // Load external classes
 const Discord = require('discord.js');
 

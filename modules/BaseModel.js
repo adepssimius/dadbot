@@ -1,7 +1,10 @@
 
+// Determine our place in the world
+const ROOT = '..';
+
 // Load singletons
-const client = require('./Client.js'); // eslint-disable-line no-unused-vars
-const knex = require('./Database.js');
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
+const knex   = require(`${ROOT}/modules/Database`);
 
 class BaseModel {
     static tableName = null;

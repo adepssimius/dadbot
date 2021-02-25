@@ -1,4 +1,7 @@
 
+// Determine our place in the world
+const ROOT = '..';
+
 let axios = require('axios');
 
 async function http_post(url, data) {

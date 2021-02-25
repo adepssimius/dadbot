@@ -1,19 +1,22 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const Activity = require('../../modules/event/Activity');
-const EmojiMap = require('../../modules/EmojiMap.js');
+const Activity = require(`${ROOT}/modules/event/Activity`);
+const EmojiMap = require(`${ROOT}/modules/EmojiMap`);
 
 // Load external classes
 const Discord = require('discord.js');
 
 // Load singletons
-const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
     guildOnly: false,
     aliases: [],
-    permLevel: 'User'
+    permLevel: 'admin'
 };
 exports.conf = conf;
 
@@ -22,7 +25,7 @@ const help = {
     name: 'edit',
     category: 'Activity Administration',
     description: 'Make changes to an activity',
-    usage: 'activity edit <name|abbreviation>'
+    usage: 'activity edit <name|alias>'
 };
 exports.help = help;
 
@@ -33,7 +36,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     }
     
     const value = args.join(' ');
-    let activities = await Activity.getByNameOrAbbr({activity_name: value, activity_abbr: value});
+    const activities = await Activity.getByNameOrAlias({activity_name: value, alias: value});
     
     if (activities.length == 0) {
         message.channel.send(`Could not find activity: '${value}'`);
@@ -50,12 +53,12 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
             onCollect: async (message, nextMessage) => {
                 activity.activity_name = nextMessage.content;
             }
-        }, {
-            name: 'Abbreviation',
-            prompt: async (message, nextMessage) => await message.channel.send(`Please enter the activity abbreviation.`),
-            onCollect: async (message, nextMessage) => {
-                activity.activity_abbr = nextMessage.content;
-            }
+        //}, {
+        //    name: 'Abbreviation',
+        //    prompt: async (message, nextMessage) => await message.channel.send(`Please enter the activity abbreviation.`),
+        //    onCollect: async (message, nextMessage) => {
+        //        activity.activity_abbr = nextMessage.content;
+        //    }
         }, {
             name: 'Activity Category',
             prompt: async (message, nextMessage) => await message.channel.send(`Please enter the activity category id.`),
@@ -69,8 +72,8 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
                 activity.fireteam_size = nextMessage.content;
             }
         }, {
-            name: 'Expected Duration',
-            prompt: async (message, nextMessage) => await message.channel.send(`Please enter the expected duration in minutes.`),
+            name: 'Estimated Maximum Duration',
+            prompt: async (message, nextMessage) => await message.channel.send(`Please enter the estimated maximum duration in minutes.`),
             onCollect: async (message, nextMessage) => {
                 activity.expected_mins = nextMessage.content;
             }

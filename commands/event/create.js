@@ -1,15 +1,18 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const DuplicateError = require('../../modules/error/DuplicateError');
+const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
-const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
     guildOnly: false,
     aliases: [],
-    permLevel: 'User'
+    permLevel: 'user'
 };
 exports.conf = conf;
 

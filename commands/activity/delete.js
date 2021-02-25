@@ -1,15 +1,18 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const Activity = require('../../modules/event/Activity');
+const Activity = require(`${ROOT}/modules/event/Activity`);
 
 // Load singletons
-const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
     guildOnly: false,
-    aliases: [],
-    permLevel: 'User'
+    aliases: ['del'],
+    permLevel: 'admin'
 };
 exports.conf = conf;
 

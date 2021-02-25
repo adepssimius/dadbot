@@ -1,7 +1,12 @@
 
+// Determine our place in the world
+const ROOT = '..';
+
+// Load our classes
+const SyncMessage = require(`${ROOT}/modules/sync/SyncMessage`);
+
 // Load singletons
-const SyncMessage = require('../modules/sync/SyncMessage');
-const client = require('../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 // 
 // TODO - Add event description here (see message.js for an example)

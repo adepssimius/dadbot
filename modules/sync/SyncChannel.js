@@ -1,15 +1,18 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const DuplicateError = require('../error/DuplicateError');
-const BaseModel = require('../BaseModel.js');
+const BaseModel      = require(`${ROOT}/modules/BaseModel`);
+const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
-const client = require('../Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 // Load external functions
-const http_post   = require('../functions').http_post;
-const http_patch  = require('../functions').http_patch;
-const http_delete = require('../functions').http_delete;
+const http_post   = require(`${ROOT}/modules/Functions`).http_post;
+const http_patch  = require(`${ROOT}/modules/Functions`).http_patch;
+const http_delete = require(`${ROOT}/modules/Functions`).http_delete;
 
 class SyncChannel extends BaseModel {
     static tableName = 'channel';

@@ -1,15 +1,18 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const Activity = require('../../modules/event/Activity');
+const Activity = require(`${ROOT}/modules/event/Activity`);
 
 // Load singletons
-const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
     guildOnly: false,
     aliases: [],
-    permLevel: 'User'
+    permLevel: null
 };
 exports.conf = conf;
 
@@ -36,13 +39,16 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     } else {
         response += 'activity';
     }
-    response += ':';
     
+    const names = [];
     for (let x = 0; x < activities.length; x++) {
         const activity = activities[x];
-        response += `\n   ${x+1}. ${activity.activity_name} [${activity.activity_abbr}]`;
+        const activityCategory = await activity.getActivityCategory();
+        
+        names.push(`${activity.activity_name} [${activityCategory.category_name}]`);
     }
+    const nameList = ( names.length > 0 ? names.join('\n') : null );
     
-    message.channel.send(response);
+    message.channel.send(response + (nameList != null ? '\n```' + nameList + '```' : ''));
 };
 exports.run = run;

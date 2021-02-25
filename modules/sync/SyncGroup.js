@@ -1,11 +1,14 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const BaseModel        = require('../BaseModel.js');
-const DuplicateError   = require('../error/DuplicateError');
-const Snowflake        = require('../Snowflake');
+const BaseModel      = require(`${ROOT}/modules/BaseModel`);
+const Snowflake      = require(`${ROOT}/modules/Snowflake`);
+const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
-const client           = require('../Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 //
 // TODO - Clean up confusing usage of name vs sync_group_name

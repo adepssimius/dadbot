@@ -1,8 +1,13 @@
 
+// Determine our place in the world
+const ROOT = '..';
+
+// Load our classes
+const SyncChannel = require(`${ROOT}/modules/sync/SyncChannel`);
+const SyncMessage = require(`${ROOT}/modules/sync/SyncMessage`);
+
 // Load singletons
-const SyncChannel = require('../modules/sync/SyncChannel');
-const SyncMessage = require('../modules/sync/SyncMessage');
-const client = require('../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 // The MESSAGE event runs anytime a message is received
 // Note that due to the binding of client to every event, every event

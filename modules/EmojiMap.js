@@ -1,4 +1,7 @@
 
+// Determine our place in the world
+const ROOT = '..';
+
 class EmojiMap {
     static map = new Map();
     

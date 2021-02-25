@@ -1,16 +1,24 @@
 
+// Determine our place in the world
+const ROOT = '..';
+
 // Load external modules
+const chalk   = require('chalk');
 const Discord = require('discord.js');
-const fs = require('fs');
+const fs      = require('fs');
+
+// Set some colors
+const colorizeCommand = chalk.green;
+const colorizeAction  = chalk.yellow;
 
 module.exports = (client) => {
     client.logger = require('./Logger');
 
     client.loadCommand = (commandName) => {
         try {
-            client.logger.log(`Loading command: ${commandName}`);
+            client.logger.log(`Loading command: ${colorizeCommand(commandName)}`);
             
-            const command = require(`../commands/${commandName}`);
+            const command = require(`${ROOT}/commands/${commandName}`);
             if (command.init) {
                 command.init(client);
             }
@@ -19,7 +27,11 @@ module.exports = (client) => {
             command.actions       = new Discord.Collection();
             command.actionAliases = new Discord.Collection();
             
+            // In this odd exception we do not use ${ROOT} because this is being
+            // called at runtime and not as an include within this module
             const actionDir = `commands/${commandName}/`;
+            
+            // Load the command actions
             if (fs.existsSync(actionDir) && fs.statSync(actionDir).isDirectory()) {
                 // Load the command actions
                 const actionFiles = fs.readdirSync(actionDir);
@@ -42,15 +54,15 @@ module.exports = (client) => {
             return false;
         
         } catch (e) {
-            return `Unable to load command ${commandName}: ${e}`;
+            return `Unable to load command ${colorizeCommand(commandName)}: ${e}`;
         }
     };
     
     client.loadCommandAction = (command, actionName) => {
         try {
-            client.logger.log(`  -> Loading command action: ${command.help.name} -> ${actionName}`);
+            client.logger.log(`  -> Loading command action: ${colorizeCommand(command.help.name)} ${colorizeAction(actionName)}`);
             
-            const action = require(`../commands/${command.help.name}/${actionName}`);
+            const action = require(`${ROOT}/commands/${command.help.name}/${actionName}`);
             if (action.init) {
                 action.init(client);
             }
@@ -64,7 +76,7 @@ module.exports = (client) => {
             return false;
         
         } catch (e) {
-            return `Unable to load command action: ${command.help.name} -> ${actionName}: ${e}`;
+            return `Unable to load command action: ${colorizeCommand(command.help.name)} ${colorizeAction(actionName)}: ${e}`;
         }
     };
     
@@ -81,9 +93,6 @@ module.exports = (client) => {
             await message.guild.members.fetch(message.author);
         }
         
-        // Get the user or member's permission level from the elevation
-        const level = client.permlevel(message);
-        
         // Check whether the command or alias exists
         const command = client.commands.get(commandName) || client.commands.get(client.aliases.get(commandName));
         if (!command) return;
@@ -93,42 +102,21 @@ module.exports = (client) => {
             return message.channel.send('This command is unavailable via private message. Please run this command in a Discord server channel.');
         }
         
-        /* TODO -
-        if (level < client.levelCache[command.conf.permLevel]) {
-            if (settings.systemNotice === 'true') {
-                return message.channel.send(`You do not have permission to use this command.
-  Your permission level is ${level} (${client.config.permLevels.find(l => l.level === level).name})
-  This command requires level ${client.levelCache[command.conf.permLevel]} (command)`);
-            } else {
-                return;
-            }
-        }
-        */
-        
-        // To simplify message arguments, the author's level is now put on level (not member so it is supported in DMs)
-        message.author.permLevel = level;
-        
-        message.flags = [];
-        while (args[0] && args[0][0] === "-") {
-            message.flags.push(args.shift().slice(1));
+        if (!client.checkPermLevel(message, command.conf.permLevel)) {
+            return message.channel.send(`You do not have permission to use this command.`);
         }
         
-        // TODO - Enable this after config.permLevels is sorted
-        // If the command exists and the user has permission, run it
-        // client.logger.cmd(`[CMD] ${client.config.permLevels.find(l => l.level === level).name}`
-        //            + ' ' +` ${message.author.username} (${message.author.id}) ran command ${command.help.name}`);
-        
-        client.logger.cmd(`[CMD] ${message.author.username} (${message.author.id}) ran command ${command.help.name}`);
+        client.logger.cmd(`[CMD] ${message.author.username} (${message.author.id}) executed command: ${colorizeCommand(command.help.name)} ${args.join(' ')}`);
         
         try {
-            command.run(message, args, level);
+            command.run(message, args);
         } catch (error) {
             console.error(error);
             message.reply('There was an error trying to execute that command!');
         }
     };
     
-    client.runCommandAction = async (message, command, actionName, args, level) => {
+    client.runCommandAction = async (message, command, actionName, args) => {
         //
         // TODO - Add handling for unrecognized command actions (and make sure we have it for commands as well)
         //
@@ -141,35 +129,14 @@ module.exports = (client) => {
             return message.channel.send('This command action is unavailable via private message. Please run this command in a Discord server channel.');
         }
         
-        /* TODO -
-        if (level < client.levelCache[action.conf.permLevel]) {
-            if (settings.systemNotice === 'true') {
-                return message.channel.send(`You do not have permission to use this command.
-  Your permission level is ${level} (${client.config.permLevels.find(l => l.level === level).name})
-  This command requires level ${client.levelCache[action.conf.permLevel]} (${cmd.action.permLevel})`);
-            } else {
-                return;
-            }
-        }
-        */
-        
-        // To simplify message arguments, the author's level is now put on level (not member so it is supported in DMs)
-        message.author.permLevel = level;
-        
-        message.flags = [];
-        while (args[0] && args[0][0] === "-") {
-            message.flags.push(args.shift().slice(1));
+        if (!client.checkPermLevel(message, action.conf.permLevel)) {
+            return message.channel.send(`You do not have permission to use this command.`);
         }
         
-        // TODO - Enable this after config.permLevels is sorted
-        // If the command exists and the user has permission, run it
-        // client.logger.cmd(`[CMD] ${client.config.permLevels.find(l => l.level === level).name}`
-        //            + ' ' +` ${message.author.username} (${message.author.id}) ran command ${command.help.name}`);
-        
-        client.logger.cmd(`[CMD] ${message.author.username} (${message.author.id}) ran command action ${command.help.name} ${action.help.name}`);
+        client.logger.cmd(`[CMD] ${message.author.username} (${message.author.id}) executed action: ${colorizeCommand(command.help.name)} ${colorizeAction(action.help.name)} ${args.join(' ')}`);
         
         try {
-            action.run(message, args, level);
+            action.run(message, args);
         } catch (error) {
             console.error(error);
             message.reply('There was an error trying to execute that command action!');
@@ -184,23 +151,42 @@ module.exports = (client) => {
      * NEVER GIVE ANYONE BUT OWNER THE LEVEL 10! By default this can run any
      * command including the VERY DANGEROUS `eval` and `exec` commands!
      */
-    client.permlevel = (message) => {
-        let permlevel = 0;
+    //client.permlevel = (message) => {
+    //    let permlevel = 0;
+    //    
+    //    const permOrder = client.config.permLevels.slice(0).sort((p, c) => p.level < c.level ? 1 : -1);
+    //    while (permOrder.length) {
+    //        const currentLevel = permOrder.shift();
+    //        if (message.guild && currentLevel.guildOnly) {
+    //            continue;
+    //        }
+    //        
+    //        if (currentLevel.check(message)) {
+    //            permlevel = currentLevel.level;
+    //            break;
+    //        }
+    //    }
+    //    
+    //    return permlevel;
+    //};
+    
+    client.checkPermLevel = (message, permLevelName) => {
+        // If this command or action does not have a permission level name, let everyone have at it
+        if (permLevelName == null) {
+            return true;
+        }
         
-        // TODO
-        // const permOrder = client.config.permLevels.slice(0).sort((p, c) => p.level < c.level ? 1 : -1);
-        //
-        // while (permOrder.length) {
-        //     const currentLevel = permOrder.shift();
-        //     if (message.guild && currentLevel.guildOnly) continue;
-        //    
-        //     if (currentLevel.check(message)) {
-        //         permlevel = currentLevel.level;
-        //         break;
-        //     }
-        // }
+        // Attempt to get the permission level
+        const permLevel = client.permLevelMap.get(permLevelName);
         
-        return permlevel;
+        // If we did not find it, something is broken
+        if (permLevel == null) {
+            client.logger.error('Permission level not found');
+            return false;
+        }
+        
+        // Otherwise, finally check the permission level
+        return permLevel.check(message);
     };
     
     client.replyWithError = async (oops, message) => {
@@ -214,9 +200,7 @@ module.exports = (client) => {
         //await message.author.send(error.message);
         //await message.author.send(error.stack);
         
-        message.author.send(`**ERROR**: ${oops}`)
-            .then(message.author.send(error.message)
-                .then(message.author.send(error.stack)));
+        message.author.send(`**ERROR**: ${oops}\n` + '```' + error.message + '```');
         
         client.logger.error(oops);
         client.logger.dump(error);

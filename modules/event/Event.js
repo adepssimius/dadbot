@@ -1,10 +1,13 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const BaseModel = require('../BaseModel.js');
-const Snowflake = require('../Snowflake');
+const BaseModel = require(`${ROOT}/modules/BaseModel`);
+const Snowflake = require(`${ROOT}/modules/Snowflake`);
 
 // Load singletons
-const client = require('../Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 class Event extends BaseModel {
     static tableName = 'event';

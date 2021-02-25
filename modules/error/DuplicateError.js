@@ -1,4 +1,7 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 class DuplicateError extends Error {
     constructor(message){
         super();
@@ -7,4 +10,3 @@ class DuplicateError extends Error {
 }
 
 module.exports = DuplicateError;
-

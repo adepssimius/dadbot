@@ -1,16 +1,19 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const SyncGroup   = require('../../modules/sync/SyncGroup');
-const SyncChannel = require('../../modules/sync/SyncChannel');
+const SyncGroup   = require(`${ROOT}/modules/sync/SyncGroup`);
+const SyncChannel = require(`${ROOT}/modules/sync/SyncChannel`);
 
 // Load singletons
-const client = require('../../modules/Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 const conf = {
     enabled: true,
     guildOnly: false,
     aliases: [],
-    permLevel: 'User'
+    permLevel: 'admin'
 };
 exports.conf = conf;
 

@@ -1,12 +1,15 @@
 
+// Determine our place in the world
+const ROOT = '../..';
+
 // Load our classes
-const BaseModel      = require('../BaseModel.js');
-const SyncGroup      = require('./SyncGroup.js');
-const SyncChannel    = require('./SyncChannel.js');
-const DuplicateError = require('../error/DuplicateError');
+const BaseModel      = require(`${ROOT}/modules/BaseModel`);
+const SyncGroup      = require(`${ROOT}/modules/sync/SyncGroup`);
+const SyncChannel    = require(`${ROOT}/modules/sync/SyncChannel`);
+const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
-const client = require('../Client.js'); // eslint-disable-line no-unused-vars
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 class SyncMessage extends BaseModel {
     static tableName = 'message';
