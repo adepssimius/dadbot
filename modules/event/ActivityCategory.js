@@ -36,6 +36,10 @@ class ActivityCategory extends BaseModel {
         return this.data.symbol;
     }
     
+    get alliance_id() {
+        return this.data.alliance_id;
+    }
+    
     get creator_id() {
         return this.data.creator_id;
     }
@@ -54,6 +58,10 @@ class ActivityCategory extends BaseModel {
     
     set symbol(value) {
         this.data.symbol = value.toUpperCase();
+    }
+    
+    set alliance_id(value) {
+        this.data.alliance_id = value;
     }
     
     set creator_id(value) {
@@ -117,6 +125,7 @@ class ActivityCategory extends BaseModel {
         let data = {
             category_name: this.category_name,
             symbol: this.symbol,
+            alliance_id: this.alliance_id,
             updated_at: this.updated_at
         };
         

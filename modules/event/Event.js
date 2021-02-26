@@ -16,12 +16,12 @@ class Event extends BaseModel {
         super(data);
     }
     
-    // ********************* //
-    // * Getters & Setters * //
-    // ********************* //
+    // *********** //
+    // * Getters * //
+    // *********** //
     
-    get event_id() {
-        return this.data.activity_id;
+    get id() {
+        return this.data.id;
     }
     
     get activity_id() {
@@ -30,6 +30,10 @@ class Event extends BaseModel {
     
     get category_id() {
         return this.data.category_id;
+    }
+    
+    get alliance_id() {
+        return this.data.alliance_id;
     }
     
     get guild_id() {
@@ -66,6 +70,62 @@ class Event extends BaseModel {
 
     get creator_id() {
         return this.data.creator_id;
+    }
+    
+    // *********** //
+    // * Setters * //
+    // *********** //
+    
+    set id(value) {
+        this.data.id = value;
+    }
+    
+    set activity_id(value) {
+        this.data.activity_id = value;
+    }
+    
+    set category_id(value) {
+        this.data.category_id = value;
+    }
+    
+    set alliance_id(value) {
+        this.data.alliance_id = value;
+    }
+    
+    set guild_id(value) {
+        this.data.guild_id = value;
+    }
+
+    set platform(value) {
+        this.data.platform = value;
+    }
+
+    set description(value) {
+         this.data.description = value;
+    }
+
+    set start_time(value) {
+        this.data.start_time = value;
+    }
+
+    set max_guardians(value) {
+         this.data.max_guardians = value;
+    }
+
+    set estimated_mins(value) {
+        this.data.estimated_mins = value;
+    }
+
+    set is_private(value) {
+        this.data.is_private = value;
+    }
+
+    set auto_delete(value) {
+        this.data.auto_delete = value;
+    }
+
+    set creator_id(value) {
+        this.data.creator_id = value;
     }
     
     // ***************** //

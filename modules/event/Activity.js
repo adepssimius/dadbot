@@ -39,15 +39,19 @@ class Activity extends BaseModel {
     get category_id() {
         return this.data.category_id;
     }
-
+    
     get fireteam_size() {
         return this.data.fireteam_size;
     }
-
+    
     get est_max_duration() {
         return this.data.est_max_duration;
     }
-
+    
+    get alliance_id() {
+        return this.data.alliance_id;
+    }
+    
     get creator_id() {
         return this.data.creator_id;
     }
@@ -67,15 +71,19 @@ class Activity extends BaseModel {
     set category_id(value) {
         this.data.category_id = value;
     }
-
+    
     set fireteam_size(value) {
         this.data.fireteam_size = value;
     }
-
+    
     set est_max_duration(value) {
         this.data.est_max_duration = value;
     }
-
+    
+    set alliance_id(value) {
+        this.data.alliance_id = value;
+    }
+    
     set creator_id(value) {
         this.data.creator_id = value;
     }
@@ -133,7 +141,7 @@ class Activity extends BaseModel {
             category_id: this.category_id,
             fireteam_size: this.fireteam_size,
             est_max_duration: this.est_max_duration,
-            creator_id: this.creator_id,
+            alliance_id: this.alliance_id,
             updated_at: this.updated_at
         };
         

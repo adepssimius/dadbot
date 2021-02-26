@@ -54,7 +54,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     for (let x = 0; x < activityAliases.length; x++) {
         aliases.push(activityAliases[x].alias);
     }
-    const aliasList = ( activityAliases.length > 0 ? aliases.join(', ') : 'none' );
+    const aliasList = ( activityAliases.length > 0 ? aliases.join(', ') : 'No aliases for this activity' );
     
     const embed = new Discord.MessageEmbed()
         .setTitle('Activity Category')

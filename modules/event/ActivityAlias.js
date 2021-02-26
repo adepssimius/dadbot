@@ -23,8 +23,8 @@ class ActivityAlias extends BaseModel {
     // * Getters * //
     // *********** //
     
-    get alias_id() {
-        return this.data.alias_id;
+    get id() {
+        return this.data.id;
     }
     
     get alias() {
@@ -34,7 +34,11 @@ class ActivityAlias extends BaseModel {
     get activity_id() {
         return this.data.activity_id;
     }
-
+    
+    get alliance_id() {
+        return this.data.alliance_id;
+    }
+    
     get creator_id() {
         return this.data.creator_id;
     }
@@ -43,16 +47,20 @@ class ActivityAlias extends BaseModel {
     // * Setters * //
     // *********** //
     
-    set alias_id(value) {
-        this.data.alias_id = value;
+    set id(value) {
+        this.data.id = value;
     }
     
     set alias(value) {
-        this.data.alias = value;
+        this.data.alias = value.toUpperCase();
     }
     
     set activity_id(value) {
         this.data.activity_id = value;
+    }
+    
+    set alliance_id(value) {
+        this.data.alliance_id = value;
     }
     
     set creator_id(value) {
@@ -66,6 +74,11 @@ class ActivityAlias extends BaseModel {
     // Standard get and create functions
     
     static async get(whereClause) {
+        // Always search alias in upper case
+        if (whereClause != null && whereClause.alias != null) {
+            whereClause.alias = whereClause.alias.toUpperCase();
+        }
+        
         let result = [];
         let rows = await this._get(whereClause);
         
@@ -77,6 +90,11 @@ class ActivityAlias extends BaseModel {
     }
     
     static async create(data) {
+        // Always store the alias in uppercase
+        if (data != null && data.alias != null) {
+            data.alias = data.alias.toUpperCase();
+        }
+        
         const activityAliases = await ActivityAlias.get(data);
         
         if (activityAliases.length > 0) {
@@ -84,7 +102,7 @@ class ActivityAlias extends BaseModel {
             throw new DuplicateError(`Alias is already used by another activity: ${activityAlias.alias}`);
         }
         
-        data.alias_id = Snowflake.generate();
+        data.id = Snowflake.generate();
         let result = await this._create(data); // eslint-disable-line no-unused-vars
         return new ActivityAlias(data);
     }
@@ -105,12 +123,12 @@ class ActivityAlias extends BaseModel {
         let data = {
             alias: this.alias,
             activity_id: this.activity_id,
-            creator_id: this.creator_id,
+            alliance_id: this.alliance_id,
             updated_at: this.updated_at
         };
         
         let rowsChanged = await knex(ActivityAlias.tableName)
-            .where('alias_id', this.alias_id)
+            .where('id', this.id)
             .update(data)
             .then(result => {
                 return result;
@@ -124,7 +142,7 @@ class ActivityAlias extends BaseModel {
     }
     
     async delete() {
-        return await ActivityAlias._delete({alias_id: this.alias_id});
+        return await ActivityAlias._delete({id: this.id});
     }
     
     async getActivity() {

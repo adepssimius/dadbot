@@ -16,9 +16,9 @@ class EventChannel extends BaseModel {
         super(data);
     }
     
-    // ********************* //
-    // * Getters & Setters * //
-    // ********************* //
+    // *********** //
+    // * Getters * //
+    // *********** //
     
     get channel_id() {
         return this.data.channel_id;
@@ -30,6 +30,22 @@ class EventChannel extends BaseModel {
     
     get channel_guild_id() {
         return this.data.channel_guild_id;
+    }
+    
+    // *********** //
+    // * Setters * //
+    // *********** //
+    
+    set channel_id(value) {
+        this.data.channel_id = value;
+    }
+    
+    set event_id(value) {
+        this.data.activity_id = value;
+    }
+    
+    set channel_guild_id(value) {
+        this.data.channel_guild_id = value;
     }
     
     // ***************** //
