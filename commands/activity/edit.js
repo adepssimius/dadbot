@@ -48,7 +48,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     // Let's put things in context
     const context = {
         create: false,
-        data: activity
+        activity: activity
     };
     
     // Get our property array

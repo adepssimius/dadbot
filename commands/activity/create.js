@@ -30,7 +30,7 @@ const run = async (message, args, level) => {
     // Let's put things in context
     const context = {
         create: true,
-        data: {creator_id: message.author.id}
+        activity: {creator_id: message.author.id}
     };
     
     // Get our property array

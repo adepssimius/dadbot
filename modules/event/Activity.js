@@ -195,7 +195,7 @@ class Activity extends BaseModel {
             },
             
             collect: async (message, nextMessage) => {
-                context.data.activity_name = nextMessage.content;
+                context.activity.activity_name = nextMessage.content;
                 if (context.create) properties.shift();
             }
         });
@@ -240,7 +240,7 @@ class Activity extends BaseModel {
                         await context.reactionCollector.stop();
                         context.reactionCollector = null;
                         
-                        context.data.category_id = activityCategory.category_id;
+                        context.activity.category_id = activityCategory.category_id;
                         
                         if (context.create) {
                             properties.shift();
@@ -269,7 +269,7 @@ class Activity extends BaseModel {
                     context.reactionCollector = null;
                     
                     const activityCategory = activityCategories[0];
-                    context.data.category_id = activityCategory.category_id;
+                    context.activity.category_id = activityCategory.category_id;
                     
                     if (context.create) properties.shift();
                 }
@@ -307,7 +307,7 @@ class Activity extends BaseModel {
                         context.reactionCollector.stop();
                         context.reactionCollector = null;
                         
-                        context.data.fireteam_size = fireteamSize;
+                        context.activity.fireteam_size = fireteamSize;
                         if (context.create) {
                             properties.shift();
                             
@@ -322,7 +322,7 @@ class Activity extends BaseModel {
                 context.reactionCollector.stop();
                 context.reactionCollector = null;
                 
-                context.data.fireteam_size = nextMessage.content;
+                context.activity.fireteam_size = nextMessage.content;
                 if (context.create) properties.shift();
             }
         });
@@ -336,7 +336,7 @@ class Activity extends BaseModel {
             },
             
             collect: async (message, nextMessage) => {
-                context.data.est_max_duration = nextMessage.content;
+                context.activity.est_max_duration = nextMessage.content;
                 if (context.create) properties.shift();
             }
         });
