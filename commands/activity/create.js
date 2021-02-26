@@ -3,13 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const Activity         = require(`${ROOT}/modules/event/Activity`);
-const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
-const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
-const EmojiMap         = require(`${ROOT}/modules/EmojiMap`);
-
-// Load external classes
-const Discord = require('discord.js');
+const Activity       = require(`${ROOT}/modules/event/Activity`);
+const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -31,167 +26,40 @@ const help = {
 };
 exports.help = help;
 
-
 const run = async (message, args, level) => {
-    const data = {creator_id: message.author.id};
+    // Let's put things in context
+    const context = {
+        create: true,
+        data: {creator_id: message.author.id}
+    };
     
-    const steps = [
-        {
-            name: 'activity_name',
-            prompt: async (message, nextMessage) => await message.channel.send(`What is the name of this activity?`),
-            onCollect: async (message, nextMessage) => {
-                data.activity_name = nextMessage.content;
-                steps.shift();
-            }
-        //}, {
-        //    name: 'activity_abbr',
-        //    prompt: async (message, nextMessage) => await message.channel.send(`What is the abbreviation for this activity?`),
-        //    onCollect: async (message, nextMessage) => {
-        //        data.activity_abbr = nextMessage.content;
-        //        steps.shift();
-        //    }
-        }, {
-            name: 'category_id',
-            prompt: async (message, nextMessage) => {
-                const emojiMap = new Map();
-                let options = '';
-                
-                // Build the emoji -> activity category map
-                const activityCategories = await ActivityCategory.get();
-                
-                for (let x = 0; x < activityCategories.length; x++) {
-                    const activityCategory = activityCategories[x];
-                    const emoji = EmojiMap.get(activityCategory.symbol);
-                    emojiMap.set(emoji, activityCategory);
-                    options += `${emoji} - ${activityCategory.category_name}\n`; 
-                }
-                
-                // Send thee prompt
-                await message.channel.send(`What activity category do you want to assign to this activity? You can choose a reaction or respond via text.`);
-                const embed = new Discord.MessageEmbed().addFields({name: 'Activity Categories', value: options.trim()});
-                const replyMessage = await message.channel.send(embed);
-                
-                // Apply the reaction
-                for (let emoji of emojiMap.keys()) {
-                    replyMessage.react(emoji);
-                }
-                
-                wip.reactionCollector = replyMessage.createReactionCollector(async (reaction, user) => {
-                    return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
-                });
-                
-                wip.reactionCollector.on('collect', async (reaction, user) => {
-                    const activityCategory = emojiMap.get(reaction.emoji.name);
-                    if (activityCategory != null) {
-                        await wip.reactionCollector.stop();
-                        wip.reactionCollector = null;
-                        
-                        data.category_id = activityCategory.category_id;
-                        steps.shift();
-                        
-                        // Since we are in a reaction collector, we need to do this manually
-                        await steps[0].prompt(message, nextMessage);
-                    }
-                });
-            },
-            onCollect: async (message, nextMessage) => {
-                const activityCategories = await ActivityCategory.getByNameOrSymbol({
-                    category_name: nextMessage.content,
-                    symbol: nextMessage.content}
-                );
-                
-                if (activityCategories.length == 0) {
-                    await message.channel.send(`Activity category not found: ${nextMessage.content}`);
-                } else if (activityCategories.length > 1) {
-                    await message.channel.send(`Multiple activity categories found: ${nextMessage.content}`);
-                } else {
-                    wip.reactionCollector.stop();
-                    wip.reactionCollector = null;
-                    
-                    const activityCategory = activityCategories[0];
-                    data.category_id = activityCategory.category_id;
-                    steps.shift();
-                }
-            }
-        }, {
-            name: 'fireteam_size',
-            prompt: async (message, nextMessage) => {
-                const emojiMap = new Map();
-                
-                // Build the emoji -> activity category map
-                const fireteamSizes = [1,2,3,4,5,6];
-                
-                const replyMessage = await message.channel.send(`What maximum fireteam size do you want to set for this activity?`);
-                for (let x = 0; x < fireteamSizes.length; x++) {
-                    const fireteamSize = fireteamSizes[x];
-                    const emoji = EmojiMap.get(fireteamSize);
-                    emojiMap.set(emoji, fireteamSize);
-                    replyMessage.react(emoji);
-                }
-                
-                const emojiFilter = (reaction, user) => {
-                    return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
-                };
-                
-                const reactionCollector = await replyMessage.createReactionCollector(emojiFilter);
-                wip.reactionCollector = reactionCollector;
-                
-                reactionCollector.on('collect', async (reaction, user) => {
-                    const fireteamSize = emojiMap.get(reaction.emoji.name);
-                    if (fireteamSize != null) {
-                        wip.reactionCollector.stop();
-                        wip.reactionCollector = null;
-                        
-                        data.fireteam_size = fireteamSize;
-                        steps.shift();
-                        
-                        // Since we are in a reaction collector, we need to do this manually
-                        steps[0].prompt(message, nextMessage);
-                    }
-                });
-            },
-            onCollect: async (message, nextMessage) => {
-                wip.reactionCollector.stop();
-                wip.reactionCollector = null;
-                
-                data.fireteam_size = nextMessage.content;
-                steps.shift();
-            }
-        }, {
-            name: 'est_max_duration',
-            prompt: async (message, nextMessage) => message.channel.send(`What is the estimated maximum direction (in minutes) of this activity?`),
-            onCollect: async (message, nextMessage) => {
-                data.est_max_duration = nextMessage.content;
-                steps.shift();
-            }
-        }
-    ];
+    // Get our property array
+    context.properties = Activity.getEditableProperties(context);
     
     // Check if the activity name was given as an argument
     if (args.length > 0) {
         const name = args.join(' ');
-        data.activity_name = name;
-        steps.shift(); // Skip the name collection step
+        context.data.activity_name = name;
+        context.properties.shift(); // Skip the name collection step
     }
     
-    const wip = {};
-    await steps[0].prompt(message);
+    await context.properties[0].prompt(message);
     
-    wip.collector = message.channel.createMessageCollector(nextMessage => {
+    context.collector = message.channel.createMessageCollector(nextMessage => {
         return nextMessage.author.id == message.author.id;
     });
-
-    wip.collector.on('collect', async function(nextMessage) {
-        await steps[0].onCollect(message, nextMessage);
+    
+    context.collector.on('collect', async function(nextMessage) {
+        await context.properties[0].collect(message, nextMessage);
         
-        if (steps.length > 0) {
-            await steps[0].prompt(message, nextMessage);
+        if (context.properties.length > 0) {
+            await context.properties[0].prompt(message, nextMessage);
         } else {
-            wip.collector.stop();
-            wip.collector = null;
+            context.collector.stop();
+            context.collector = null;
             	            
             try {
-                const activity = await Activity.create(data);
+                const activity = await Activity.create(context.data);
                 await message.channel.send(`Activity created`);
                 
                 client.logger.debug('Activity Created:');
@@ -201,7 +69,7 @@ const run = async (message, args, level) => {
                 if (error instanceof DuplicateError) {
                     await client.replyWithError(error.message, message);
                 } else {
-                    await client.replyWithErrorAndDM(`Creation of activity failed: ${data.activity_name}`, message, error);
+                    await client.replyWithErrorAndDM(`Creation of activity failed: ${context.data.activity_name}`, message, error);
                 }
             }
         }

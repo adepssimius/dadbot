@@ -45,50 +45,24 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     
     const activity = activities[0];
     
-    // Get things ready for editing
-    const attributes = [
-        {
-            name: 'Name',
-            prompt: async (message, nextMessage) => await message.channel.send(`Please enter the activity name.`),
-            onCollect: async (message, nextMessage) => {
-                activity.activity_name = nextMessage.content;
-            }
-        //}, {
-        //    name: 'Abbreviation',
-        //    prompt: async (message, nextMessage) => await message.channel.send(`Please enter the activity abbreviation.`),
-        //    onCollect: async (message, nextMessage) => {
-        //        activity.activity_abbr = nextMessage.content;
-        //    }
-        }, {
-            name: 'Activity Category',
-            prompt: async (message, nextMessage) => await message.channel.send(`Please enter the activity category id.`),
-            onCollect: async (message, nextMessage) => {
-                activity.category_id = nextMessage.content;
-            }
-        }, {
-            name: 'Fireteam Size',
-            prompt: async (message, nextMessage) => await message.channel.send(`Please enter the maximum fireteam size.`),
-            onCollect: async (message, nextMessage) => {
-                activity.fireteam_size = nextMessage.content;
-            }
-        }, {
-            name: 'Estimated Maximum Duration',
-            prompt: async (message, nextMessage) => await message.channel.send(`Please enter the estimated maximum duration in minutes.`),
-            onCollect: async (message, nextMessage) => {
-                activity.expected_mins = nextMessage.content;
-            }
-        }
-    ];
+    // Let's put things in context
+    const context = {
+        create: false,
+        data: activity
+    };
+    
+    // Get our property array
+    context.properties = Activity.getEditableProperties(context);
     
     async function loop() {
         const emojiMap = new Map();
         let options = '';
         
-        for (let x = 0; x < attributes.length; x++) {
-            const attribute = attributes[x];
+        for (let x = 0; x < context.properties.length; x++) {
+            const property = context.properties[x];
             const emoji = EmojiMap.get(x+1);
-            emojiMap.set(emoji, attribute);
-            options += `${emoji} - ${attribute.name}\n`;
+            emojiMap.set(emoji, property);
+            options += `${emoji} - ${property.name}\n`;
         }
         emojiMap.set(EmojiMap.get(':x:'), {name: 'Stop'});
         
@@ -100,21 +74,25 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
             replyMessage.react(emoji);
         }
         
+        //
+        // FIXME - For some reason it does not update until after you type something or something
+        //
+        
         const reactionCollector = replyMessage.createReactionCollector(async (reaction, user) => {
             return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
         });
         
         reactionCollector.on('collect', async (reaction, user) => {
-            const attribute = emojiMap.get(reaction.emoji.name);
+            const property = emojiMap.get(reaction.emoji.name);
             
             // See if it is time to stop
-            if (attribute.name == 'Stop') {
+            if (property.name == 'Stop') {
                 message.channel.send('Exiting edit loop');
                 return;
             }
             
             // Otherwise prompt and collect more stuff
-            await attribute.prompt(message);
+            await property.prompt(message);
             
             const messageCollector = message.channel.createMessageCollector(nextMessage => {
                 return nextMessage.author.id == message.author.id;
@@ -125,7 +103,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
                 messageCollector.stop();
                 
                 // Process this one
-                await attribute.onCollect(message, nextMessage);
+                await property.collect(message, nextMessage);
                 await activity.update();
                 message.channel.send('Activity updated');
                 

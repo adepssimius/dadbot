@@ -12,7 +12,7 @@ const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unus
 const conf = {
     enabled: true,
     guildOnly: false,
-    aliases: [],
+    aliases: ['add'],
     permLevel: 'admin'
 };
 exports.conf = conf;
