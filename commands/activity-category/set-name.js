@@ -31,8 +31,8 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         return;
     }
     
-    const symbol = args.shift();
-    const name   = args.join(' ');
+    const symbol  = args.shift();
+    const newName = args.join(' ');
     
     let activityCategories = await ActivityCategory.get({symbol: symbol});
     if (activityCategories.length == 0) {
@@ -41,14 +41,14 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     }
     
     const activityCategory = activityCategories[0];
-    activityCategory.category_name = name;
+    activityCategory.categoryName = newName;
     
     try {
         await activityCategory.update();
         message.channel.send(`Activity category name updated`);
     
     } catch (error) {
-        const label = `${activityCategory.category_name} [${activityCategory.symbol}]`;
+        const label = `${activityCategory.categoryName} [${activityCategory.symbol}]`;
         client.replyWithErrorAndDM(`Update of activity category name failed: ${label}`, message, error);
     }
 };

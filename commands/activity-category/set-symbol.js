@@ -48,7 +48,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         message.channel.send(`Activity category symbol updated`);
     
     } catch (error) {
-        const label = `${activityCategory.category_name} [${activityCategory.symbol}]`;
+        const label = `${activityCategory.categoryName} [${activityCategory.symbol}]`;
         client.replyWithErrorAndDM(`Update of activity category symbol failed: ${label}`, message, error);
     }
 };

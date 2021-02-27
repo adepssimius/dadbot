@@ -35,7 +35,10 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     }
     
     const value = args.join(' ').replace(/^"(.+)"$/g, "$1").replace(/^'(.+)'$/g, "$1");
-    let activityCategories = await ActivityCategory.getByNameOrSymbol({category_name: value, symbol: value});
+    let activityCategories = await ActivityCategory.getByNameOrSymbol({
+        categoryName: value,
+        symbol: value
+    });
     
     if (activityCategories.length == 0) {
         message.channel.send(`Could not find activity category: '${value}'`);
@@ -43,12 +46,12 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     }
     
     const activityCategory = activityCategories[0];
-    //message.channel.send(`Activity category found: ${activityCategory.category_name} [${activityCategory.symbol}]`);
+    //message.channel.send(`Activity category found: ${activityCategory.categoryName} [${activityCategory.symbol}]`);
     
     const embed = new Discord.MessageEmbed()
         .setTitle('Activity Category')
         .addFields(
-            { name: 'Category Name', value: activityCategory.category_name },
+            { name: 'Category Name', value: activityCategory.categoryName },
             { name: 'Category Symbol', value: activityCategory.symbol }
         );
     message.channel.send(embed);

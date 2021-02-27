@@ -17,19 +17,35 @@ class ActivityCategory extends BaseModel {
     static orderBy   = 'category_name';
     
     constructor(data) {
-        super({});
-        this.data = data;
+        if (data.categoryId == null) data.categoryId = Snowflake.generate();
+        super(data);
+        
+        // Populate custom fields with the same database and object name
+        if (data.symbol != null) this.symbol = data.symbol;
+        
+        // Populate custom fields with different database and object names
+        if      (data.category_id != null) this.categoryId = data.category_id;
+        else if (data.categoryId  != null) this.categoryId = data.categoryId;
+        
+        if      (data.category_name != null) this.categoryName = data.category_name;
+        else if (data.categoryName  != null) this.categoryName = data.categoryName;
+        
+        if      (data.alliance_id != null) this.allianceId  = data.alliance_id;
+        else if (data.allianceId  != null) this.allianceId  = data.allianceId;
+        
+        if      (data.creator_id != null) this.creatorId  = data.creator_id;
+        else if (data.creatorId  != null) this.creatorId  = data.creatorId;
     }
     
     // *********** //
     // * Getters * //
     // *********** //
     
-    get category_id() {
+    get categoryId() {
         return this.data.category_id;
     }
     
-    get category_name() {
+    get categoryName() {
         return this.data.category_name;
     }
     
@@ -37,11 +53,11 @@ class ActivityCategory extends BaseModel {
         return this.data.symbol;
     }
     
-    get alliance_id() {
+    get allianceId() {
         return this.data.alliance_id;
     }
     
-    get creator_id() {
+    get creatorId() {
         return this.data.creator_id;
     }
     
@@ -49,11 +65,11 @@ class ActivityCategory extends BaseModel {
     // * Setters * //
     // *********** //
     
-    set category_id(value) {
+    set categoryId(value) {
         this.data.category_id = value;
     }
     
-    set category_name(value) {
+    set categoryName(value) {
         this.data.category_name = value;
     }
     
@@ -61,11 +77,11 @@ class ActivityCategory extends BaseModel {
         this.data.symbol = value.toUpperCase();
     }
     
-    set alliance_id(value) {
+    set allianceId(value) {
         this.data.alliance_id = value;
     }
     
-    set creator_id(value) {
+    set creatorId(value) {
         this.data.creator_id = value;
     }
     
@@ -91,28 +107,11 @@ class ActivityCategory extends BaseModel {
         return result;
     }
     
-    static async create(data) {
-        // Always store the symbol in uppercase
-        if (data != null && data.symbol != null) {
-            data.symbol = data.symbol.toUpperCase();
-        }
-        
-        const activityCategories = await ActivityCategory.getByNameOrSymbol(data);
-        if (activityCategories.length > 0) {
-            const activityCategory = activityCategories[0];
-            throw new DuplicateError(`Existing category found with the same name or symbol: ${activityCategory.category_name} [${activityCategory.symbol}]`);
-        }
-        
-        data.category_id = Snowflake.generate();
-        const result = await this._create(data); // eslint-disable-line no-unused-vars
-        return new ActivityCategory(data);
-    }
-    
     // Extra functions for this class
     
     static async getByNameOrSymbol(data) {
         return await ActivityCategory.get( (query) =>
-            query.where('category_name', data.category_name).orWhere('symbol', data.symbol.toUpperCase())
+            query.where('category_name', data.categoryName).orWhere('symbol', data.symbol.toUpperCase())
         );
     }
     
@@ -120,19 +119,27 @@ class ActivityCategory extends BaseModel {
     // * Instance Methods * //
     // ******************** //
     
-    async update() {
-        this.updated_at = knex.fn.now();
+    async create() {
+        const BaseModel = require(`${ROOT}/modules/BaseModel`);
         
-        let data = {
-            category_name: this.category_name,
-            symbol: this.symbol,
-            alliance_id: this.alliance_id,
-            updated_at: this.updated_at
-        };
+        const activityCategories = await ActivityCategory.getByNameOrSymbol({
+            categoryName: this.categoryName,
+            symbol: this.symbol
+        });
+        
+        if (activityCategories.length > 0) {
+            throw new DuplicateError(`Existing category found with the same name or symbol: ${this.categoryName} [${this.symbol}]`);
+        }
+        
+        await BaseModel.create.call(this, ActivityCategory.tableName, this.data);
+    }
+    
+    async update() {
+        this.updatedAt = knex.fn.now();
         
         let rowsChanged = await knex(ActivityCategory.tableName)
-            .where('category_id', this.category_id)
-            .update(data)
+            .where('category_id', this.categoryId)
+            .update(this.data)
             .then(result => {
                 return result;
             });
@@ -146,12 +153,12 @@ class ActivityCategory extends BaseModel {
     
     async delete() {
         const Activity = require(`${ROOT}/modules/event/Activity`);
-        const activities = await Activity.get({category_id: this.category_id});
+        const activities = await Activity.get({category_id: this.categoryId});
         
         if (activities.length > 0) {
             throw new ForeignKeyError('Cannot delete category while activities still exist');
         }
-        return await ActivityCategory._delete({category_id: this.category_id});
+        return await ActivityCategory._delete({category_id: this.categoryId});
     }
 }
 

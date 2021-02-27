@@ -156,24 +156,15 @@ class Activity extends BaseModel {
     }
     
     async update() {
-        this.updated_at = knex.fn.now();
-        
-        let data = {
-            activity_name: this.activity_name,
-            category_id: this.category_id,
-            fireteam_size: this.fireteam_size,
-            est_max_duration: this.est_max_duration,
-            alliance_id: this.alliance_id,
-            updated_at: this.updated_at
-        };
+        this.updatedAt = knex.fn.now();
         
         let rowsChanged = await knex(Activity.tableName)
             .where('activity_id', this.activity_id)
-            .update(data)
+            .update(this.data)
             .then(result => {
                 return result;
             });
-            
+        
         if (rowsChanged == 0) {
             throw new Error('Update did not change any records!');
         } else if (rowsChanged > 1) {
@@ -182,13 +173,13 @@ class Activity extends BaseModel {
     }
     
     async delete() {
-        const activityAliases = ActivityAlias.get({activity_id: this.activity_id});
+        const activityAliases = ActivityAlias.get({activity_id: this.activityId});
         
         for (let x = 0; x < activityAliases.length; x++) {
             await activityAliases[x].delete();
         }
         
-        return await Activity._delete({activity_id: this.activity_id});
+        return await Activity._delete({activity_id: this.activityId});
     }
     
     async getActivityCategory() {
@@ -196,9 +187,9 @@ class Activity extends BaseModel {
         const activityCategories = await ActivityCategory.get({category_id: this.categoryId});
         
         if (activityCategories.length == 0) {
-            throw new Error(`Unexpectedly did not find an activity category for category_id = '${this.category_id}'`);
+            throw new Error(`Unexpectedly did not find an activity category for category_id = '${this.categoryId}'`);
         } else if (activityCategories.length > 1) {
-            throw new Error(`Unexpectedly found multiple activity categories for category_id = '${this.category_id}'`);
+            throw new Error(`Unexpectedly found multiple activity categories for category_id = '${this.categoryId}'`);
         }
         
         return activityCategories[0];
@@ -247,7 +238,7 @@ class Activity extends BaseModel {
                     const activityCategory = activityCategories[x];
                     const emoji = EmojiMap.get(activityCategory.symbol);
                     emojiMap.set(emoji, activityCategory);
-                    options += `${emoji} - ${activityCategory.category_name}\n`; 
+                    options += `${emoji} - ${activityCategory.categoryName}\n`; 
                 }
                 
                 // Send the prompt
@@ -270,7 +261,7 @@ class Activity extends BaseModel {
                         await context.reactionCollector.stop();
                         context.reactionCollector = null;
                         
-                        context.activity.categoryId = activityCategory.category_id;
+                        context.activity.categoryId = activityCategory.categoryId;
                         
                         if (context.create) {
                             properties.shift();
@@ -286,7 +277,7 @@ class Activity extends BaseModel {
                 const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
                 
                 const activityCategories = await ActivityCategory.getByNameOrSymbol({
-                    category_name: nextMessage.content,
+                    categoryName: nextMessage.content,
                     symbol: nextMessage.content}
                 );
                 
@@ -299,7 +290,7 @@ class Activity extends BaseModel {
                     context.reactionCollector = null;
                     
                     const activityCategory = activityCategories[0];
-                    context.activity.categoryId = activityCategory.category_id;
+                    context.activity.categoryId = activityCategory.categoryId;
                     
                     if (context.create) properties.shift();
                 }

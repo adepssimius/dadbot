@@ -61,7 +61,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         .addFields(
             { name: 'Activity Name', value: activity.activityName },
             { name: 'Activity Alias', value: aliasList },
-            { name: 'Activity Category', value: `${activityCategory.category_name} [${activityCategory.symbol}]` },
+            { name: 'Activity Category', value: `${activityCategory.categoryName} [${activityCategory.symbol}]` },
             { name: 'Maximum Fireteam Size', value: activity.fireteamSize },
             { name: 'Estimated Maximum Duration', value: `${activity.estMaxDuration} minutes` }
         );

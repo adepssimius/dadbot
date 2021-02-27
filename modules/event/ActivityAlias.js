@@ -118,7 +118,7 @@ class ActivityAlias extends BaseModel {
     }
     
     async update() {
-        this.updated_at = knex.fn.now();
+        this.updatedAt = knex.fn.now();
         
         let rowsChanged = await knex(ActivityAlias.tableName)
             .where('id', this.id)
@@ -140,7 +140,7 @@ class ActivityAlias extends BaseModel {
     
     async getActivity() {
         const Activity = require(`${ROOT}/modules/event/Activity`);
-        const activities = await Activity.get({'activity_id': this.activity_id});
+        const activities = await Activity.get({'activity_id': this.activityId});
         
         if (activities.length == 0) {
             throw new Error(`Unexpectedly did not find an activity with alias = '${this.alias}'`);

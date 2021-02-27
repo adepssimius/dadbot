@@ -56,17 +56,16 @@ const run = async (message, args, level) => {
         return;
     }
     
-    
-    // Put the data object together
-    const data = {
-        category_name: name,
+    // Create the activity category object
+    const activityCategory = new ActivityCategory({
+        categoryName: name,
         symbol: symbol,
-        creator_id: message.author.id
-    };
+        creatorId: message.author.id
+    });
     
-    // Attempt to reate the activity category
+    // Attempt to create the activity category
     try {
-        const activityCategory = await ActivityCategory.create(data);
+        activityCategory.create();
         message.channel.send(`Activity category created`);
         
         client.logger.debug('Activity Category:');
@@ -76,7 +75,7 @@ const run = async (message, args, level) => {
         if (error instanceof DuplicateError) {
             client.replyWithError(error.message, message);
         } else {
-            const label = `${data.category_name} [${data.symbol}]`;
+            const label = `${name} [${symbol}]`;
             client.replyWithErrorAndDM(`Creation of activity category failed: ${label}`, message, error);
         }
     }
