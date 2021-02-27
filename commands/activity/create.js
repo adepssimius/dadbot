@@ -30,7 +30,7 @@ const run = async (message, args, level) => {
     // Let's put things in context
     const context = {
         create: true,
-        activity: {creator_id: message.author.id}
+        activity: new Activity({creator_id: message.author.id})
     };
     
     // Get our property array
@@ -39,7 +39,7 @@ const run = async (message, args, level) => {
     // Check if the activity name was given as an argument
     if (args.length > 0) {
         const name = args.join(' ');
-        context.data.activity_name = name;
+        context.activity.activityName = name;
         context.properties.shift(); // Skip the name collection step
     }
     
@@ -59,17 +59,17 @@ const run = async (message, args, level) => {
             context.collector = null;
             	            
             try {
-                const activity = await Activity.create(context.data);
+                await context.activity.create();
                 await message.channel.send(`Activity created`);
                 
                 client.logger.debug('Activity Created:');
-                client.logger.dump(activity);
+                client.logger.dump(context.activity);
             
             } catch (error) {
                 if (error instanceof DuplicateError) {
                     await client.replyWithError(error.message, message);
                 } else {
-                    await client.replyWithErrorAndDM(`Creation of activity failed: ${context.data.activity_name}`, message, error);
+                    await client.replyWithErrorAndDM(`Creation of activity failed: ${context.activity.activityName}`, message, error);
                 }
             }
         }

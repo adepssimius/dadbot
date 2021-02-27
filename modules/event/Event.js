@@ -13,7 +13,8 @@ class Event extends BaseModel {
     static tableName = 'event';
     
     constructor(data) {
-        super(data);
+        super({});
+        this.data = data;
     }
     
     // *********** //

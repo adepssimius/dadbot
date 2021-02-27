@@ -13,7 +13,8 @@ class EventChannel extends BaseModel {
     static tableName = 'event_channel';
     
     constructor(data) {
-        super(data);
+        super({});
+        this.data = data;
     }
     
     // *********** //

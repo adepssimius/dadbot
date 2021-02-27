@@ -16,16 +16,26 @@ class ActivityAlias extends BaseModel {
     static orderBy   = 'alias';
     
     constructor(data = {}) {
+        if (data.id == null) data.id = Snowflake.generate();
         super(data);
+        
+        // Populate custom fields with the same database and object name
+        if (data.alias != null) this.alias = data.alias;
+        
+        // Populate custom fields with different database and object names
+        if      (data.activity_id != null) this.activityId = data.activity_id;
+        else if (data.activityId  != null) this.activityId = data.activityId;
+        
+        if      (data.alliance_id != null) this.allianceId = data.alliance_id;
+        else if (data.allianceId  != null) this.allianceId = data.allianceId;
+        
+        if      (data.creator_id  != null) this.creatorId  = data.creator_id;
+        else if (data.creatorId   != null) this.creatorId  = data.creatorId;
     }
     
     // *********** //
     // * Getters * //
     // *********** //
-    
-    get id() {
-        return this.data.id;
-    }
     
     get alias() {
         return this.data.alias;
@@ -46,10 +56,6 @@ class ActivityAlias extends BaseModel {
     // *********** //
     // * Setters * //
     // *********** //
-    
-    set id(value) {
-        this.data.id = value;
-    }
     
     set alias(value) {
         this.data.alias = value.toUpperCase();
@@ -88,7 +94,7 @@ class ActivityAlias extends BaseModel {
         
         return result;
     }
-    
+
     // Extra functions for this class
     
     //
@@ -102,40 +108,25 @@ class ActivityAlias extends BaseModel {
     async create() {
         const BaseModel = require(`${ROOT}/modules/BaseModel`);
         
-        const data = {
-            id: Snowflake.generate(),
-            alias: this.alias,
-            activity_id: this.activityId,
-            creator_id: this.creatorId
-        };
-        
         const activityAliases = await ActivityAlias.get({alias: this.alias});
-        
         if (activityAliases.length > 0) {
             const activityAlias = activityAliases[0];
             throw new DuplicateError(`Alias is already used by another activity: ${activityAlias.alias}`);
         }
         
-        await BaseModel.create.call(this, ActivityAlias.tableName, data);
+        await BaseModel.create.call(this, ActivityAlias.tableName, this.data);
     }
     
     async update() {
         this.updated_at = knex.fn.now();
         
-        let data = {
-            alias: this.alias,
-            activity_id: this.activity_id,
-            alliance_id: this.alliance_id,
-            updated_at: this.updated_at
-        };
-        
         let rowsChanged = await knex(ActivityAlias.tableName)
             .where('id', this.id)
-            .update(data)
+            .update(this.data)
             .then(result => {
                 return result;
             });
-            
+        
         if (rowsChanged == 0) {
             throw new Error('Update did not change any records!');
         } else if (rowsChanged > 1) {

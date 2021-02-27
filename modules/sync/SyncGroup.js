@@ -18,7 +18,8 @@ class SyncGroup extends BaseModel {
     static tableName = 'sync_group';
     
     constructor(data) {
-        super(data);
+        super({});
+        this.data = data;
     }
     
     // ********************* //

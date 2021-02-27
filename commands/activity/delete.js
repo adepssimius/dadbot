@@ -45,8 +45,7 @@ const run = async (message, args, level) => {
         message.channel.send(`Activity category deleted`);
     
     } catch (error) {
-        const label = `${activity.activity_name} [${activity.activity_abbr}]`;
-        client.replyWithErrorAndDM(`Deletion of activity category failed: ${label}`, message, error);
+        client.replyWithErrorAndDM(`Deletion of activity category failed: ${activity.activityName}`, message, error);
     }
 };
 exports.run = run;
