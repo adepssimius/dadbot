@@ -21,7 +21,8 @@ class Activity extends BaseModel {
     static orderBy   = 'activity_name';
     
     constructor(data) {
-        super(data);
+        super({});
+        this.data = data;
     }
     
     // *********** //

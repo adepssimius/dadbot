@@ -18,7 +18,8 @@ class SyncChannel extends BaseModel {
     static tableName = 'channel';
     
     constructor(data) {
-        super(data);
+        super({});
+        this.data = data;
 	}
 	
     // ********************* //

@@ -56,13 +56,12 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         return;
     }
     
-    // Build the alias data element
-    const activityAlias = new ActivityAlias();
-    
-    // Set the properties
-    activityAlias.alias      = alias;
-    activityAlias.activityId = activity.activity_id;
-    activityAlias.creatorId  = message.author.id;
+    // Create the activity alias
+    const activityAlias = new ActivityAlias({
+        alias: alias,
+        activityId: activity.activity_id,
+        creatorId: message.author.id
+    });
     
     // Attempt to create the alias
     try {

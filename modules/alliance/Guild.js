@@ -15,7 +15,8 @@ class Guild extends BaseModel {
     static orderBy   = 'created_at';
     
     constructor(data) {
-        super(data);
+        super({});
+        this.data = data;
     }
     
     // *********** //

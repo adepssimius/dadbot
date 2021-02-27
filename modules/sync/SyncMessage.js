@@ -15,7 +15,8 @@ class SyncMessage extends BaseModel {
     static tableName = 'message';
     
     constructor(data) {
-        super(data);
+        super({});
+        this.data = data;
 	}
 	
     // ********************* //

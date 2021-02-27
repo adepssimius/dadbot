@@ -17,7 +17,8 @@ class ActivityCategory extends BaseModel {
     static orderBy   = 'category_name';
     
     constructor(data) {
-        super(data);
+        super({});
+        this.data = data;
     }
     
     // *********** //

@@ -14,7 +14,8 @@ class Guardian extends BaseModel {
     static tableName = 'guardian';
     
     constructor(data) {
-        super(data);
+        super({});
+        this.data = data;
     }
     
     // ********************* //

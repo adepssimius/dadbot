@@ -17,7 +17,8 @@ class Alliance extends BaseModel {
     static orderBy   = 'alliance_name';
     
     constructor(data) {
-        super(data);
+        super({});
+        this.data = data;
     }
     
     // *********** //
