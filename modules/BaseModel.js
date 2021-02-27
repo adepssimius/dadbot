@@ -96,6 +96,18 @@ class BaseModel {
     // * Instance Methods * //
     // ******************** //
     
+    static async create(tableName, data) {
+        const timestamp = knex.fn.now();
+        data.created_at = timestamp;
+        data.updated_at = timestamp;
+        
+        return await knex(tableName)
+            .insert(data)
+            .then(function(result) {
+                return result;
+            });
+    }
+    
     async delete(data) {
         return null;
     }
