@@ -57,13 +57,13 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     const aliasList = ( activityAliases.length > 0 ? aliases.join(', ') : 'No aliases for this activity' );
     
     const embed = new Discord.MessageEmbed()
-        .setTitle('Activity Category')
+        .setTitle('Activity')
         .addFields(
-            { name: 'Activity Name', value: activity.activity_name },
+            { name: 'Activity Name', value: activity.activityName },
             { name: 'Activity Alias', value: aliasList },
             { name: 'Activity Category', value: `${activityCategory.category_name} [${activityCategory.symbol}]` },
-            { name: 'Maximum Fireteam Size', value: activity.fireteam_size },
-            { name: 'Estimated Maximum Duration', value: `${activity.est_max_duration} minutes` }
+            { name: 'Maximum Fireteam Size', value: activity.fireteamSize },
+            { name: 'Estimated Maximum Duration', value: `${activity.estMaxDuration} minutes` }
         );
     message.channel.send(embed);
 };

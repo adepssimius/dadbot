@@ -59,7 +59,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     // Create the activity alias
     const activityAlias = new ActivityAlias({
         alias: alias,
-        activityId: activity.activity_id,
+        activityId: activity.activityId,
         creatorId: message.author.id
     });
     

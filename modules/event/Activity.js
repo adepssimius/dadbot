@@ -21,39 +21,61 @@ class Activity extends BaseModel {
     static orderBy   = 'activity_name';
     
     constructor(data) {
-        super({});
-        this.data = data;
+        if (data.activityId == null) data.activityId = Snowflake.generate();
+        super(data);
+        
+        // Populate custom fields with different database and object names
+        if      (data.activity_id != null) this.activityId = data.activity_id;
+        else if (data.activityId  != null) this.activityId = data.activityId;
+        
+        if      (data.activity_name != null) this.activityName = data.activity_name;
+        else if (data.activityName  != null) this.activityName = data.activityName;
+        
+        if      (data.category_id != null) this.categoryId  = data.category_id;
+        else if (data.categoryId  != null) this.categoryId  = data.categoryId;
+        
+        if      (data.fireteam_size != null) this.fireteamSize  = data.fireteam_size;
+        else if (data.fireteamSize  != null) this.fireteamSize  = data.fireteamSize;
+        
+        if      (data.est_max_duration != null) this.estMaxDuration  = data.est_max_duration;
+        else if (data.estMaxDuration   != null) this.estMaxDuration  = data.estMaxDuration;
+        
+        if      (data.alliance_id != null) this.allianceId  = data.alliance_id;
+        else if (data.allianceId  != null) this.allianceId  = data.allianceId;
+        
+        if      (data.creator_id != null) this.creatorId  = data.creator_id;
+        else if (data.creatorId  != null) this.creatorId  = data.creatorId;
     }
     
     // *********** //
     // * Getters * //
     // *********** //
     
-    get activity_id() {
+    get activityId() {
         return this.data.activity_id;
     }
     
-    get activity_name() {
+    get activityName() {
         return this.data.activity_name;
     }
     
-    get category_id() {
+    get categoryId() {
         return this.data.category_id;
     }
     
-    get fireteam_size() {
+    get fireteamSize() {
         return this.data.fireteam_size;
     }
     
-    get est_max_duration() {
+    get estMaxDuration() {
         return this.data.est_max_duration;
     }
     
-    get alliance_id() {
+    get allianceId() {
         return this.data.alliance_id;
     }
     
-    get creator_id() {
+    get creatorId() {
         return this.data.creator_id;
     }
     
@@ -61,31 +83,31 @@ class Activity extends BaseModel {
     // * Setters * //
     // *********** //
     
-    set activity_id(value) {
+    set activityId(value) {
         this.data.activity_id = value;
     }
     
-    set activity_name(value) {
+    set activityName(value) {
         this.data.activity_name = value;
     }
     
-    set category_id(value) {
+    set categoryId(value) {
         this.data.category_id = value;
     }
     
-    set fireteam_size(value) {
+    set fireteamSize(value) {
         this.data.fireteam_size = value;
     }
     
-    set est_max_duration(value) {
+    set estMaxDuration(value) {
         this.data.est_max_duration = value;
     }
     
-    set alliance_id(value) {
+    set allianceId(value) {
         this.data.alliance_id = value;
     }
     
-    set creator_id(value) {
+    set creatorId(value) {
         this.data.creator_id = value;
     }
     
@@ -106,19 +128,6 @@ class Activity extends BaseModel {
         return result;
     }
     
-    static async create(data) {
-        const activities = await Activity.get(data);
-        
-        if (activities.length > 0) {
-            const activity = activities[0];
-            throw new DuplicateError(`Existing activity found with the same name [${activity.activity_abbr}] ${activity.activity_name}`);
-        }
-        
-        data.activity_id = Snowflake.generate();
-        let result = await this._create(data); // eslint-disable-line no-unused-vars
-        return new Activity(data);
-    }
-    
     // Extra functions for this class
     
     static async getByNameOrAlias(data) {
@@ -133,6 +142,18 @@ class Activity extends BaseModel {
     // ******************** //
     // * Instance Methods * //
     // ******************** //
+    
+    async create() {
+        const BaseModel = require(`${ROOT}/modules/BaseModel`);
+        
+        const activities = await Activity.get({activity_name: this.activityName});
+        if (activities.length > 0) {
+            const activity = activities[0];
+            throw new DuplicateError(`Existing activity found with the same name: ${activity.activityName}`);
+        }
+        
+        await BaseModel.create.call(this, Activity.tableName, this.data);
+    }
     
     async update() {
         this.updated_at = knex.fn.now();
@@ -172,7 +193,7 @@ class Activity extends BaseModel {
     
     async getActivityCategory() {
         const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
-        const activityCategories = await ActivityCategory.get({category_id: this.category_id});
+        const activityCategories = await ActivityCategory.get({category_id: this.categoryId});
         
         if (activityCategories.length == 0) {
             throw new Error(`Unexpectedly did not find an activity category for category_id = '${this.category_id}'`);
@@ -185,7 +206,7 @@ class Activity extends BaseModel {
     
     async getActivityAliases() {
         const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
-        return await ActivityAlias.get({activity_id: this.activity_id});
+        return await ActivityAlias.get({activity_id: this.activityId});
     }
     
     // ***************************************** //
@@ -204,7 +225,7 @@ class Activity extends BaseModel {
             },
             
             collect: async (message, nextMessage) => {
-                context.activity.activity_name = nextMessage.content;
+                context.activity.activityName = nextMessage.content;
                 if (context.create) properties.shift();
             }
         });
@@ -249,7 +270,7 @@ class Activity extends BaseModel {
                         await context.reactionCollector.stop();
                         context.reactionCollector = null;
                         
-                        context.activity.category_id = activityCategory.category_id;
+                        context.activity.categoryId = activityCategory.category_id;
                         
                         if (context.create) {
                             properties.shift();
@@ -278,7 +299,7 @@ class Activity extends BaseModel {
                     context.reactionCollector = null;
                     
                     const activityCategory = activityCategories[0];
-                    context.activity.category_id = activityCategory.category_id;
+                    context.activity.categoryId = activityCategory.category_id;
                     
                     if (context.create) properties.shift();
                 }
@@ -316,7 +337,7 @@ class Activity extends BaseModel {
                         context.reactionCollector.stop();
                         context.reactionCollector = null;
                         
-                        context.activity.fireteam_size = fireteamSize;
+                        context.activity.fireteamSize = fireteamSize;
                         if (context.create) {
                             properties.shift();
                             
@@ -331,7 +352,7 @@ class Activity extends BaseModel {
                 context.reactionCollector.stop();
                 context.reactionCollector = null;
                 
-                context.activity.fireteam_size = nextMessage.content;
+                context.activity.fireteamSize = nextMessage.content;
                 if (context.create) properties.shift();
             }
         });
@@ -345,7 +366,7 @@ class Activity extends BaseModel {
             },
             
             collect: async (message, nextMessage) => {
-                context.activity.est_max_duration = nextMessage.content;
+                context.activity.estMaxDuration = nextMessage.content;
                 if (context.create) properties.shift();
             }
         });
