@@ -57,16 +57,17 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     }
     
     // Build the alias data element
-    const data = {
-        alias: alias,
-        activity_id: activity.activity_id,
-        creator_id: message.author.id
-    };
-
+    const activityAlias = new ActivityAlias();
+    
+    // Set the properties
+    activityAlias.alias      = alias;
+    activityAlias.activityId = activity.activity_id;
+    activityAlias.creatorId  = message.author.id;
+    
     // Attempt to create the alias
     try {
-        const activityAlias = await ActivityAlias.create(data);
-        message.channel.send(`Activity alias category created`);
+        await activityAlias.create();
+        message.channel.send(`Activity alias created`);
         
         client.logger.debug('Activity Alias:');
         client.logger.dump(activityAlias);
@@ -75,8 +76,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         if (error instanceof DuplicateError) {
             client.replyWithError(error.message, message);
         } else {
-            const label = `${data.category_name} [${data.symbol}]`;
-            client.replyWithErrorAndDM(`Creation of activity alias failed: ${label}`, message, error);
+            client.replyWithErrorAndDM(`Creation of activity alias failed: ${activityAlias.alias}`, message, error);
         }
     }
 };

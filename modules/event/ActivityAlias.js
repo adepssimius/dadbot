@@ -15,7 +15,7 @@ class ActivityAlias extends BaseModel {
     static tableName = 'activity_alias';
     static orderBy   = 'alias';
     
-    constructor(data) {
+    constructor(data = {}) {
         super(data);
     }
     
@@ -31,15 +31,15 @@ class ActivityAlias extends BaseModel {
         return this.data.alias;
     }
     
-    get activity_id() {
+    get activityId() {
         return this.data.activity_id;
     }
     
-    get alliance_id() {
+    get allianceId() {
         return this.data.alliance_id;
     }
     
-    get creator_id() {
+    get creatorId() {
         return this.data.creator_id;
     }
     
@@ -55,15 +55,15 @@ class ActivityAlias extends BaseModel {
         this.data.alias = value.toUpperCase();
     }
     
-    set activity_id(value) {
+    set activityId(value) {
         this.data.activity_id = value;
     }
     
-    set alliance_id(value) {
+    set allianceId(value) {
         this.data.alliance_id = value;
     }
     
-    set creator_id(value) {
+    set creatorId(value) {
         this.data.creator_id = value;
     }
     
@@ -89,24 +89,6 @@ class ActivityAlias extends BaseModel {
         return result;
     }
     
-    static async create(data) {
-        // Always store the alias in uppercase
-        if (data != null && data.alias != null) {
-            data.alias = data.alias.toUpperCase();
-        }
-        
-        const activityAliases = await ActivityAlias.get(data);
-        
-        if (activityAliases.length > 0) {
-            const activityAlias = activityAliases[0];
-            throw new DuplicateError(`Alias is already used by another activity: ${activityAlias.alias}`);
-        }
-        
-        data.id = Snowflake.generate();
-        let result = await this._create(data); // eslint-disable-line no-unused-vars
-        return new ActivityAlias(data);
-    }
-    
     // Extra functions for this class
     
     //
@@ -116,6 +98,26 @@ class ActivityAlias extends BaseModel {
     // ******************** //
     // * Instance Methods * //
     // ******************** //
+    
+    async create() {
+        const BaseModel = require(`${ROOT}/modules/BaseModel`);
+        
+        const data = {
+            id: Snowflake.generate(),
+            alias: this.alias,
+            activity_id: this.activityId,
+            creator_id: this.creatorId
+        };
+        
+        const activityAliases = await ActivityAlias.get({alias: this.alias});
+        
+        if (activityAliases.length > 0) {
+            const activityAlias = activityAliases[0];
+            throw new DuplicateError(`Alias is already used by another activity: ${activityAlias.alias}`);
+        }
+        
+        await BaseModel.create.call(this, ActivityAlias.tableName, data);
+    }
     
     async update() {
         this.updated_at = knex.fn.now();

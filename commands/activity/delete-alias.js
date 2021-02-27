@@ -48,7 +48,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         message.channel.send(`Activity alias deleted`);
     
     } catch (error) {
-        client.replyWithErrorAndDM(`Deletion of activity alias failed: ${alias}`, message, error);
+        client.replyWithErrorAndDM(`Deletion of activity alias failed: ${activityAlias.alias}`, message, error);
     }
 };
 exports.run = run;
