@@ -16,92 +16,71 @@ const http_delete = require(`${ROOT}/modules/Functions`).http_delete;
 
 class SyncChannel extends BaseModel {
     static tableName = 'channel';
+    static orderBy   = 'created_at';
+    static fields    = ['guild_id', 'channel_group_id', 'webhook_id', 'webhook_url'];
+    static fieldMap  = BaseModel.getFieldMap(SyncChannel.fields);
     
     constructor(data) {
-        super({});
-        this.data = data;
+        super(SyncChannel, data);
 	}
 	
-    // ********************* //
-    // * Getters & Setters * //
-    // ********************* //
+	temp = {};
+	
+    // *********** //
+    // * Getters * //
+    // *********** //
     
-    get channel_id() {
-        return this.data.channel_id;
+    get tableName() {
+        return SyncChannel.tableName;
     }
     
-    get guild_id() {
+    get guildId() {
         return this.data.guild_id;
     }
     
-    get sync_group_id() {
-        return this.data.sync_group_id;
+    get channelGroupId() {
+        return this.data.channel_group_id;
     }
     
-    get webhook_id() {
+    get webhookId() {
         return this.data.webhook_id;
     }
     
-    get webhook_url() {
+    get webhookUrl() {
         return this.data.webhook_url;
+    }
+    
+    get channel() {
+        return this.temp.channel;
+    }
+    
+    // *********** //
+    // * Setters * //
+    // *********** //
+    
+    set guildId(value) {
+        this.data.guild_id = value;
+    }
+    
+    set channelGroupId(value) {
+        this.data.channel_group_id = value;
+    }
+    
+    set webhookId(value) {
+        this.data.webhook_id = value;
+    }
+    
+    set webhookUrl(value) {
+        this.data.webhook_url = value;
+    }
+    
+    set channel(value) {
+        this.temp.channel = value;
     }
     
     // ***************** //
     // * Class Methods * //
     // ***************** //
-    
-    static async get(whereClause) {
-        let result = [];
-        let rows = await this._get(whereClause);
-        
-        for (let x = 0; x < rows.length; x++) {
-            result.push(new SyncChannel(rows[x]));
-        }
-        
-        return result;
-    }
-    
-    static async create(data) {
-        const syncGroup = data.syncGroup;
-        const channel   = data.channel;
-        
-        // Check to see if this channel is already in a synchronization group
-        const syncChannels = await SyncChannel.get({'channel_id': channel.id});
-        if (syncChannels.length > 0) {
-            throw new DuplicateError(`This channel is already linked to a channel synchronization group`);
-        }
-        
-        // Check if we need to create a webhook for this channel
-        let webhook;
-        let webhooks = await channel.fetchWebhooks();
-        let sync_webhook_name = SyncChannel.getSyncWebhookName(syncGroup);
-        
-        for (webhook of webhooks.values()) {
-            if (webhook.name == sync_webhook_name) {
-                break; 
-            } else {
-                webhook = null;
-            }
-        }
-        
-        if (webhook == null) {
-            webhook = await channel.createWebhook(sync_webhook_name, {avatar: client.user.displayAvatarURL()});
-        }
-        
-        const syncChannelData = {
-            'channel_id': channel.id,
-            'guild_id': channel.guild.id,
-            'sync_group_id': syncGroup.sync_group_id,
-            'webhook_id': webhook.id,
-            'webhook_url': webhook.url
-        };
-        
-        client.logger.debug('syncChannelData');
-        client.logger.dump(syncChannelData);
-        
-        let result = await this._create(syncChannelData); // eslint-disable-line no-unused-vars
-        return new SyncChannel(syncChannelData);
-    }
     
     static async getLinkedSyncChannelData(channel_id) {
         // Get the sync channel for the original message
@@ -128,23 +107,63 @@ class SyncChannel extends BaseModel {
         return {syncChannel: syncChannels[0], cloneSyncChannels: cloneSyncChannels};
     }
     
-    static getSyncWebhookName(syncGroup) {
-        return `Ninkasi Bot - Sync Group [${syncGroup.name}]`;
-    }
-    
     // ******************** //
     // * Instance Methods * //
     // ******************** //
+    
+    async create() {
+        // Check to see if this channel is already in a synchronization group
+        const syncChannels = await SyncChannel.get({id: this.id});
+        if (syncChannels.length > 0) {
+            throw new DuplicateError(`This channel is already linked to a channel synchronization group`);
+        }
+        
+        // Set webhook details
+        let webhook;
+        let webhookName = await this.getWebhookName();
+        
+        // Check if we already have a webhook for this channel
+        let webhooks = await this.channel.fetchWebhooks();
+        for (const nextWebhook of webhooks.values()) {
+            if (nextWebhook.name == webhookName) {
+                webhook = nextWebhook;
+                break;
+            }
+        }
+        
+        // If we do not, then attempt to create one
+        if (webhook == null) {
+            webhook = await this.channel.createWebhook(webhookName, {avatar: client.user.displayAvatarURL()});
+        }
+        
+        // Set the webhook values
+        this.webhookId  = webhook.id;
+        this.webhookUrl = webhook.url;
+        
+        // Finally attempt to create the synchronization channel
+        await BaseModel.prototype.create.call(this);
+    }
     
     async delete() {
         const webhook = await client.fetchWebhook(this.webhook_id);
         
         if (webhook != null) {
-            // Technically this does not need to be synchronous
             await webhook.delete();
         }
         
-        return await SyncChannel._delete({channel_id: this.channel_id});
+        await BaseModel.prototype.delete.call(this);
+    }
+    
+    async getWebhookName() {
+        if (this.channelGroupId == null) {
+            return null;
+        }
+        
+        const SyncChannelGroup  = require(`${ROOT}/modules/sync/SyncChannelGroup`);
+        const syncChannelGroups = await SyncChannelGroup.get({id: this.channelGroupId});
+        const syncChannelGroup  = syncChannelGroups[0];
+        
+        return `Ninkasi Bot - Sync Group [${syncChannelGroup.name}]`;
     }
     
     getDiscordChannel() {

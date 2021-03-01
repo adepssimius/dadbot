@@ -3,8 +3,8 @@
 const ROOT = '..';
 
 // Load our classes
-const SyncChannel = require(`${ROOT}/modules/sync/SyncChannel`);
-const SyncMessage = require(`${ROOT}/modules/sync/SyncMessage`);
+//const SyncChannel = require(`${ROOT}/modules/sync/SyncChannel`);
+//const SyncMessage = require(`${ROOT}/modules/sync/SyncMessage`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -31,7 +31,7 @@ module.exports = async (message) => {
         //}
     
     // Otherwise, attempt to send the message to the synchronization group
-    } else {
-        SyncMessage.sync(message);
+    //} else {
+    //    SyncMessage.sync(message);
     }
 };

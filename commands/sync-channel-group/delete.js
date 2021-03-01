@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const SyncGroup = require(`${ROOT}/modules/sync/SyncGroup`);
+const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -17,11 +17,11 @@ const conf = {
 exports.conf = conf;
 
 const help = {
-    command: 'sync-group',
+    command: 'sync-channel-group',
     name: 'delete',
     category: 'Message Synchronization',
-    description: 'Sync Channel administration command',
-    usage: 'sync-group delete <group-name>'
+    description: 'Channel synchronization group administration command',
+    usage: 'sync-channel-group delete <group-name>'
 };
 exports.help = help;
 
@@ -32,21 +32,20 @@ const run = async (message, args, level) => {
     }
     
     const name = args[0];
-    const syncGroups = await SyncGroup.get({name: name});
+    const syncChannelGroups = await SyncChannelGroup.get({name: name});
     
-    if (syncGroups.length == 0) {
+    if (syncChannelGroups.length == 0) {
         message.channel.send(`Could not find a channel synchronization group named '${name}'`);
         return;
     }
     
-    const syncGroup = syncGroups[0];
+    const syncChannelGroup = syncChannelGroups[0];
     
     try {
-        await syncGroup.delete();
-        message.channel.send(`Channel synchronization group '${name}' deleted`);
+        await syncChannelGroup.delete();
+        message.channel.send(`Channel synchronization group deleted`);
     } catch (error) {
-        message.channel.send(`Error deleting synchronization group '${name}'`);
-        throw `Error deleting synchronization group '${name}' - ${error}`;
+        client.replyWithErrorAndDM(`Deletion of channel synchronization group failed: ${name}`, message, error);
     }
 };
 exports.run = run;

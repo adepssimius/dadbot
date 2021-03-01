@@ -24,6 +24,10 @@ class Guild extends BaseModel {
     // * Getters * //
     // *********** //
     
+    get tableName() {
+        return Guild.tableName;
+    }
+    
     get allianceId() {
         return this.data.alliance_id;
     }
@@ -76,30 +80,24 @@ class Guild extends BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    static async get(objCondition) {
-        const BaseModel = require(`${ROOT}/modules/BaseModel`);
-        let condition;
-        
-        if (objCondition == null) {
-            condition = null;
-        
-        } else if (objCondition.clanNameOrShortName != null) {
-            condition = (query) => {
-                query.where('clan_name', objCondition.clanName).orWhere('clan_short_name', objCondition.clanShortName.toUpperCase());
+    static parseConditions(conditions) {
+        // Check for a clan name or clan short name search
+        if (conditions.clanNameOrShortName != null) {
+            return (query) => {
+                query.where('clan_name', conditions.clanName).orWhere('clan_short_name', conditions.clanShortName.toUpperCase());
             };
-        
-        } else {
-            condition = BaseModel.parseObjCondition(Guild, objCondition);
-            
-            if (condition.clanShortName != null) {
-                condition.clanShortName = condition.clanShortName.toUpperCase();
-            }
-            condition = {};
         }
         
-        return await BaseModel.get(Guild, condition);
+        // Handle any special fields
+        const parsedConditions = conditions;
+        
+        if (parsedConditions.clanShortName != null) {
+            parsedConditions.clanShortName = parsedConditions.clanShortName.toUpperCase();
+        }
+        
+        return parsedConditions;
     }
-
+        
     // ******************** //
     // * Instance Methods * //
     // ******************** //
@@ -113,18 +111,7 @@ class Guild extends BaseModel {
         }
         
         // And attempt to create the damn thing
-        const BaseModel = require(`${ROOT}/modules/BaseModel`);
-        await BaseModel.create(Guild.tableName, this.data);
-    }
-    
-    async update() {
-        const BaseModel = require(`${ROOT}/modules/BaseModel`);
-        await BaseModel.update(Guild.tableName, this.data);
-    }
-    
-    async delete() {
-        const BaseModel = require(`${ROOT}/modules/BaseModel`);
-        await BaseModel.delete(Guild.tableName, this.data);
+        await BaseModel.prototype.create.call(this);
     }
     
     async getTitle() {

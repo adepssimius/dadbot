@@ -38,6 +38,10 @@ class BaseModel {
     // * Getters  * //
     // ************ //
     
+    get tableName() {
+        return BaseModel.tableName;
+    }
+    
     get id() {
         return this.data.id;
     }
@@ -48,15 +52,6 @@ class BaseModel {
     
     get updatedAt() {
         return this.data.updated_at;
-    }
-    
-    // Remove these when all data classes have been converted
-    get created_at() {
-        return this.createdAt;
-    }
-    
-    get updated_at() {
-        return this.updatedAt;
     }
     
     // *********** //
@@ -78,116 +73,58 @@ class BaseModel {
         this.data.updated_at = value;
     }
     
-    // Remove these when all data classes have been converted
-    set created_at(value) {
-        this.createdAt = value;
-    }
-    
-    set updated_at(value) {
-        this.updatedAt = value;
-    }
-    
     // ***************** //
     // * Class Methods * //
     // ***************** //
     
-    //static get(conditions) {
-    //    return null;
-    //}
-    
-    static async get(ChildClass, condition) {
-        let rows;
+    static async get(conditions = {}) {
+        let parsedConditions = conditions;
         
-        if (condition != null) {
-            rows = await knex(ChildClass.tableName)
-                .where(condition)
-                .orderBy(this.orderBy)
-                .then(function(rows) {
-                    return rows;
-                });
-        } else {
-            rows = await knex(ChildClass.tableName)
-                .orderBy(this.orderBy)
-                .then(function(rows) {
-                    return rows;
-                });
+        if (typeof conditions == 'object') {
+            parsedConditions = this.parseConditions(conditions);
+            parsedConditions = this.parseFieldConditions(parsedConditions);
         }
         
+        const rows = await knex(this.tableName)
+            .where(parsedConditions)
+            .orderBy(this.orderBy)
+            .then(function(rows) {
+                return rows;
+            });
+
         const result = [];
         for (let x = 0; x < rows.length; x++) {
-            result.push(new ChildClass(rows[x]));
+            result.push(new this(rows[x]));
         }
         return result;
     }
     
-    //static async _create(data) {
-    //    const timestamp = knex.fn.now();
-    //    data.created_at = timestamp;
-    //    data.updated_at = timestamp;
-    //    
-    //    return await knex(this.tableName)
-    //        .insert(data)
-    //        .then(function(result) {
-    //            return result;
-    //        });
-    //}
-    
-    //static async _delete(condition) {
-    //    return await knex(this.tableName)
-    //        .where(condition)
-    //        .delete()
-    //        .then(result => {
-    //            return result;
-    //        });
-    //}
-    
-    // ******************** //
-    // * Instance Methods * //
-    // ******************** //
-    
-    static async create(tableName, data) {
-        return await knex(tableName)
-            .insert(data)
-            .then(function(result) {
-                return result;
-            });
+    static parseConditions(conditions) {
+        return conditions;
     }
     
-    static async update(tableName, data, condition) {
-        if (condition == null) {
-            condition = {id: data.id};
+    static parseFieldConditions(conditions) {
+        if (typeof conditions != 'object') {
+            return conditions;
         }
         
-        // Update the timestamp
-        this.updatedAt = knex.fn.now();
+        const parsedConditions = {};
         
-        const rowsChanged = await knex(tableName)
-            .where(condition)
-            .update(data)
-            .then(result => {
-                return result;
-            });
-        
-        if (rowsChanged == 0) {
-            throw new Error('Update did not change any records!');
-        } else if (rowsChanged > 1) {
-            throw new Error('Update changed more then one record!');
+        for (const objField in conditions) {
+            const dbField = this.fieldMap.objFields.get(objField);
+            
+            if (dbField == null) {
+                throw new Error(`Unrecognized field - ${objField}`);
+            }
+            
+            parsedConditions[dbField] = conditions[objField];
         }
         
-        return rowsChanged;
+        return parsedConditions;
     }
     
-    static async delete(tableName, data, condition) {
-        if (condition == null) {
-            condition = {id: data.id};
-        }
-        
-        return await knex(tableName)
-            .where(condition)
-            .delete()
-            .then(result => {
-                return result;
-            });
+    static snakeToCamel(str) {
+        return str.replace( /([-_][a-z])/g, (group) => group.toUpperCase().replace('_', '') );
     }
     
     static getFieldMap(fields) {
@@ -211,24 +148,50 @@ class BaseModel {
         return {allFields: allFieldMap, objFields: objFieldMap};
     }
     
-    static snakeToCamel(str) {
-        return str.replace( /([-_][a-z])/g, (group) => group.toUpperCase().replace('_', '') );
+    // ******************** //
+    // * Instance Methods * //
+    // ******************** //
+    
+    async create() {
+        const tableName = this.tableName;
+        return await knex(tableName)
+            .insert(this.data)
+            .then(function(result) {
+                return result;
+            });
     }
     
-    static parseObjCondition(ChildClass, objCondition) {
-        const condition = {};
+    async update(condition = {id: this.id}) {
+        const tableName = this.tableName;
         
-        for (const objField in objCondition) {
-            const dbField = ChildClass.fieldMap.objFields.get(objField);
-            
-            if (dbField == null) {
-                throw new Error(`Unrecognized field - ${objField}`);
-            }
-            
-            condition[dbField] = objCondition[objField];
+        // Update the timestamp
+        this.updatedAt = knex.fn.now();
+        
+        const rowsChanged = await knex(tableName)
+            .where(condition)
+            .update(this.data)
+            .then(result => {
+                return result;
+            });
+        
+        if (rowsChanged == 0) {
+            throw new Error('Update did not change any records!');
+        } else if (rowsChanged > 1) {
+            throw new Error('Update changed more then one record!');
         }
         
-        return condition;
+        return rowsChanged;
+    }
+    
+    async delete(condition = {id: this.id}) {
+        const tableName = this.tableName;
+        
+        return await knex(tableName)
+            .where(condition)
+            .delete()
+            .then(result => {
+                return result;
+            });
     }
 }
 

@@ -3,7 +3,7 @@
 const ROOT = '..';
 
 // Load our classes
-const SyncMessage = require(`${ROOT}/modules/sync/SyncMessage`);
+//const SyncMessage = require(`${ROOT}/modules/sync/SyncMessage`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -17,5 +17,5 @@ module.exports = async (message) => {
     if (message.author.bot) return;
 
     // Attempt to update the message
-    SyncMessage.syncDelete(message);
+    //SyncMessage.syncDelete(message);
 };

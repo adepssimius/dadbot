@@ -24,6 +24,10 @@ class Alliance extends BaseModel {
     // * Getters * //
     // *********** //
     
+    get tableName() {
+        return Alliance.tableName;
+    }
+    
     get name() {
         return this.data.name;
     }
@@ -60,36 +64,33 @@ class Alliance extends BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    static async get(objCondition) {
-        const BaseModel = require(`${ROOT}/modules/BaseModel`);
-        let condition;
-        
-        if (objCondition == null) {
-            condition = null;
-        
-        } else if (objCondition.nameOrShortName != null) {
-            condition = (query) => {
-                query.where('name', objCondition.nameOrShortName.name)
-                    .orWhere('short_name', objCondition.nameOrShortName.shortName.toUpperCase());
+    static parseConditions(conditions) {
+        // Check for a name or short name search
+        if (conditions.nameOrShortName != null) {
+            return (query) => {
+                query.where('name', conditions.nameOrShortName.name)
+                    .orWhere('short_name', conditions.nameOrShortName.shortName.toUpperCase());
             };
-        
-        } else if (objCondition.guildId != null) {
-            const Guild = require(`${ROOT}/modules/alliance/Guild`);
-            condition = (query) => {
-                query.whereIn('id', function() {
-                    this.select('alliance_id').from(Guild.tableName).where('id', objCondition.guildId);
-                });
-            };
-        
-        } else {
-            condition = BaseModel.parseObjCondition(Alliance, objCondition);
-            
-            if (condition.shortName != null) {
-                condition.shortName = condition.shortName.toUpperCase();
-            }
         }
         
-        return await BaseModel.get(Alliance, condition);
+        // Check for a guild id search
+        if (conditions.guildId != null) {
+            const Guild = require(`${ROOT}/modules/alliance/Guild`);
+            return (query) => {
+                query.whereIn('id', function() {
+                    this.select('alliance_id').from(Guild.tableName).where('id', conditions.guildId);
+                });
+            };
+        }
+        
+        // Handle any special fields
+        let parsedConditions = conditions;
+        
+        if (parsedConditions.shortName != null) {
+            parsedConditions.shortName = parsedConditions.shortName.toUpperCase();
+        }
+        
+        return parsedConditions;
     }
     
     // ******************** //
@@ -112,19 +113,8 @@ class Alliance extends BaseModel {
         // Create the ID for this alliance
         this.id = Snowflake.generate();
         
-        // And attempt to create the damn thing
-        const BaseModel = require(`${ROOT}/modules/BaseModel`);
-        await BaseModel.create(Alliance.tableName, this.data);
-    }
-    
-    async update() {
-        const BaseModel = require(`${ROOT}/modules/BaseModel`);
-        await BaseModel.update(Alliance.tableName, this.data);
-    }
-    
-    async delete() {
-        const BaseModel = require(`${ROOT}/modules/BaseModel`);
-        await BaseModel.delete(Alliance.tableName, this.data);
+        // And attempt to create it
+        await BaseModel.prototype.create.call(this);
     }
     
     getTitle() {

@@ -164,7 +164,7 @@ knex.schema.hasTable('message').then(function(exists) {
             table.string ('orig_message_id', 20);
             table.string ('orig_channel_id', 20);
             table.string ('orig_guild_id', 20);
-            table.string ('sync_group_id', 20).notNullable();
+            table.string ('channel_group_id', 20).notNullable();
             table.boolean('is_clone').notNullable().defaultTo(false);
             table.string ('content', 2000);
             table.string ('author_id', 20).notNullable();
@@ -178,7 +178,6 @@ knex.schema.hasTable('message').then(function(exists) {
             //    .references('id')
             //    .inTable('channel');
             
-            // TODO - Add this in when we integrate the guild table into the code
             //table.foreign('guild_id', 'message_fk2')
             //    .references('id')
             //    .inTable('guild');

@@ -3,8 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const SyncGroup      = require(`${ROOT}/modules/sync/SyncGroup`);
-const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
+const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
+const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -18,11 +18,11 @@ const conf = {
 exports.conf = conf;
 
 const help = {
-    command: 'sync-group',
+    command: 'sync-channel-group',
     name: 'create',
     category: 'Message Synchronization',
     description: 'Create a new channel synchronization group',
-    usage: 'sync-group create <group-name>'
+    usage: 'sync-channel-group create <group-name>'
 };
 exports.help = help;
 
@@ -32,19 +32,24 @@ const run = async (message, args, level) => {
         return;
     }
     
+    // Grab the name
     const name = args[0];
+    
+    // Create the channel group object
+    const syncChannelGroup = await new SyncChannelGroup({name: name});
+    
     try {
-        const syncGroup = await SyncGroup.create({name: name});
+        syncChannelGroup.create();
         message.channel.send(`Created sync group: ${name}`);
         
-        client.logger.debug('Sync Group:');
-        client.logger.dump(syncGroup);
+        client.logger.debug('Sync Channel Group:');
+        client.logger.dump(syncChannelGroup);
     } catch (error) {
         if (error instanceof DuplicateError) {
             message.channel.send(error.message);
             return;
         } else {
-            const details = `Error creating synchronization group '${name}'`;
+            const details = `Error creating channel synchronization group '${name}'`;
             message.channel.send(details);
             client.logger.error(details);
             client.logger.dump(error);

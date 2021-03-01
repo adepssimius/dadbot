@@ -36,7 +36,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         const alliances = await Alliance.get({nameOrShortName: {name: value, shortName: value}});
         
         if (alliances.length == 0) {
-            message.channel.send(`Could not find alliance: '${value}'`);
+            message.channel.send(`Could not find alliance: ${value}`);
             return;
         }
         alliance = alliances[0];

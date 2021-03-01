@@ -3,8 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const SyncGroup   = require(`${ROOT}/modules/sync/SyncGroup`);
-const SyncChannel = require(`${ROOT}/modules/sync/SyncChannel`);
+const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
+const SyncChannel      = require(`${ROOT}/modules/sync/SyncChannel`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -18,11 +18,11 @@ const conf = {
 exports.conf = conf;
 
 const help = {
-    command: 'sync-group',
+    command: 'sync-channel-group',
     name: 'info',
     category: 'Message Synchronization',
     description: 'Show the details about a channel synchronization group',
-    usage: 'sync-group info <group-name>'
+    usage: 'sync-channel-group info <group-name>'
 };
 exports.help = help;
 
@@ -33,18 +33,21 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     }
     
     const name = args[0];
-    const syncGroups = await SyncGroup.get({name: name});
+    const syncChannelGroups = await SyncChannelGroup.get({name: name});
     
-    if (syncGroups.length == 0) {
-        message.channel.send(`Could not find a channel synchronization group named '${name}'`);
+    if (syncChannelGroups.length == 0) {
+        message.channel.send(`Could not find channel synchronization group: ${name}`);
         return;
     }
     
-    const syncGroup = syncGroups[0];
-    const syncChannelGetConditions = {'sync_group_id': syncGroup.sync_group_id};
-    const syncChannels = await SyncChannel.get(syncChannelGetConditions);
-    let responseContent = `Channel synchronization group '${syncGroup.name}' found with ${syncChannels.length} channel(s)`;
+    const syncChannelGroup = syncChannelGroups[0];
+    const syncChannels = await SyncChannel.get({'channelGroupId': syncChannelGroup.id});
+    let responseContent = `Channel synchronization group '${syncChannelGroup.name}' found with ${syncChannels.length} channel`;
     
+    if (syncChannels.length != 1) {
+        responseContent += 's';
+    }
+
     if (syncChannels.length > 0) {
         responseContent += '\n';
     }
