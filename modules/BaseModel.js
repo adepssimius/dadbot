@@ -80,8 +80,8 @@ class BaseModel {
     static async get(conditions = {}) {
         let parsedConditions = conditions;
         
-        if (typeof conditions == 'object') {
-            parsedConditions = this.parseConditions(conditions);
+        if (typeof parsedConditions == 'object') {
+            parsedConditions = this.parseConditions(parsedConditions);
             parsedConditions = this.parseFieldConditions(parsedConditions);
         }
         
@@ -123,19 +123,22 @@ class BaseModel {
         return parsedConditions;
     }
     
-    static snakeToCamel(str) {
-        return str.replace( /([-_][a-z])/g, (group) => group.toUpperCase().replace('_', '') );
-    }
-    
     static getFieldMap(fields) {
+        function snakeToCamel(str) {
+            return str.replace( /([-_][a-z])/g, (group) => group.toUpperCase().replace('_', '') );
+        }
+        
+        // Always add these as they are on all tables
+        fields.push('created_at', 'updated_at');
+        
+        // Initialize the maps
         const allFieldMap = new Map();
         const objFieldMap = new Map();
         
-        fields.push('created_at', 'updated_at');
-        
+        // Add all the fields
         for (let x = 0; x < fields.length; x++) {
             const dbField = fields[x];
-            const objField = BaseModel.snakeToCamel(dbField);
+            const objField = snakeToCamel(dbField);
             
             objFieldMap.set(objField, dbField);
             allFieldMap.set(objField, objField);
@@ -145,6 +148,7 @@ class BaseModel {
             }
         }
         
+        // And return the result
         return {allFields: allFieldMap, objFields: objFieldMap};
     }
     
