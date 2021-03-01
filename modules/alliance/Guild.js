@@ -13,34 +13,31 @@ const knex   = require(`${ROOT}/modules/Database`);
 class Guild extends BaseModel {
     static tableName = 'guild';
     static orderBy   = 'created_at';
+    static fields    = ['id', 'alliance_id', 'clan_name', 'clan_short_name', 'clan_bungie_num', 'timezone', 'creator_id'];
+    static fieldMap  = BaseModel.getFieldMap(Guild.fields);
     
     constructor(data) {
-        super({});
-        this.data = data;
+        super(Guild, data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
     
-    get guild_id() {
-        return this.data.guild_id;
-    }
-    
-    get alliance_id() {
+    get allianceId() {
         return this.data.alliance_id;
     }
     
-    get clan_name() {
+    get clanName() {
         return this.data.clan_name;
     }
     
-    get clan_alias() {
-        return this.data.clan_alias;
+    get clanShortName() {
+        return this.data.clan_short_name;
     }
     
-    get clan_id() {
-        return this.data.clan_id;
+    get clanBungieNum() {
+        return this.data.clan_bungie_num;
     }
     
     get timezone() {
@@ -51,24 +48,24 @@ class Guild extends BaseModel {
     // * Setters * //
     // *********** //
     
-    set guild_id(value) {
-        this.data.guild_id = value;
-    }
-    
-    set alliance_id(value) {
+    set allianceId(value) {
         this.data.alliance_id = value;
     }
     
-    set clan_name(value) {
+    set clanName(value) {
         this.data.clan_name = value;
     }
     
-    set clan_alias(value) {
-        this.data.clan_alias = value.toUpperCase();
+    set clanShortName(value) {
+        if (value == null) {
+            this.data.clan_short_name = null;
+        } else {
+            this.data.clan_short_name = value.toUpperCase();
+        }
     }
     
-    set clan_id(value) {
-        this.data.clan_id = value;
+    set clanBungieNum(value) {
+        this.data.clan_bungie_num = value;
     }
     
     set timezone(value) {
@@ -79,102 +76,74 @@ class Guild extends BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    // Standard get and create functions
-    
-    static async get(whereClause) {
-        // Always search clan_alias in upper case
-        if (whereClause != null && whereClause.clan_alias != null) {
-            whereClause.clan_alias = whereClause.clan_alias.toUpperCase();
+    static async get(objCondition) {
+        const BaseModel = require(`${ROOT}/modules/BaseModel`);
+        let condition;
+        
+        if (objCondition == null) {
+            condition = null;
+        
+        } else if (objCondition.clanNameOrShortName != null) {
+            condition = (query) => {
+                query.where('clan_name', objCondition.clanName).orWhere('clan_short_name', objCondition.clanShortName.toUpperCase());
+            };
+        
+        } else {
+            condition = BaseModel.parseObjCondition(Guild, objCondition);
+            
+            if (condition.clanShortName != null) {
+                condition.clanShortName = condition.clanShortName.toUpperCase();
+            }
+            condition = {};
         }
         
-        const result = [];
-        const rows = await this._get(whereClause);
-        
-        for (let x = 0; x < rows.length; x++) {
-            result.push(new Guild(rows[x]));
-        }
-        
-        return result;
+        return await BaseModel.get(Guild, condition);
     }
-    
-    static async create(data) {
-        // Always store the clan_alias
-        if (data != null && data.clan_alias != null) {
-            data.clan_alias = data.clan_alias.toUpperCase();
-        }
-        
-        const guilds = await Guild.get({guild_id: data.guild_id});
-        if (guilds.length > 0) {
-            throw new DuplicateError(`Guild already exists`);
-        }
-        
-        const result = await this._create(data); // eslint-disable-line no-unused-vars
-        return new Guild(data);
-    }
-    
-    // Extra functions for this class
-    
-    static async getByNameOrAlias(data) {
-        const Guild = require(`${ROOT}/modules/alliance/Guild`);
-        
-        return await Guild.get( (query) =>
-            query.whereIn('alliance_id', function() {
-                this.select('alliance_id').from(Guild.tableName).where('guild_id', data.guild_id);
-            }).andWhere('clan_name', data.clan_name).orWhere('clan_alias', data.clan_alias)
-        );
-    }
-    
+
     // ******************** //
     // * Instance Methods * //
     // ******************** //
     
-    async update() {
-        this.updated_at = knex.fn.now();
+    async create() {
+        const guilds = await Guild.get({'id': this.id});
         
-        let data = {
-            alliance_id: this.alliance_id,
-            clan_name: this.clan_name,
-            clan_alias: this.clan_alias,
-            clan_id: this.clan_id,
-            timezone: this.timezone,
-            updated_at: this.updated_at
-        };
-        
-        let rowsChanged = await knex(Guild.tableName)
-            .where('guild_id', this.guild_id)
-            .update(data)
-            .then(result => {
-                return result;
-            });
-        
-        if (rowsChanged == 0) {
-            throw new Error('Update did not change any records!');
-        } else if (rowsChanged > 1) {
-            throw new Error('Update changed more then one record!');
+        // Check if this is a duplicate alliance
+        if (guilds.length > 0) {
+            throw new DuplicateError(`Guild already exists`);
         }
+        
+        // And attempt to create the damn thing
+        const BaseModel = require(`${ROOT}/modules/BaseModel`);
+        await BaseModel.create(Guild.tableName, this.data);
+    }
+    
+    async update() {
+        const BaseModel = require(`${ROOT}/modules/BaseModel`);
+        await BaseModel.update(Guild.tableName, this.data);
     }
     
     async delete() {
-        return await Guild._delete({guild_id: this.guild_id});
+        const BaseModel = require(`${ROOT}/modules/BaseModel`);
+        await BaseModel.delete(Guild.tableName, this.data);
     }
     
     async getTitle() {
-        const suffix = (this.clan_alias != null ? ` [${this.clan_alias}]` : '');
+        const suffix = (this.clanShortName != null ? ` [${this.clanShortName}]` : '');
         
-        if (this.clan_name != null) {
-            return this.clan_name + suffix;
+        if (this.clanName != null) {
+            return this.clanName + suffix;
         } else {
-            const discordGuild = await client.guilds.fetch(this.guild_id);
+            const discordGuild = await client.guilds.fetch(this.id);
             return discordGuild.name + suffix;
         }
     }
     
     getClanURL() {
-        if (this.clan_id == null) {
+        if (this.clanBungieNum == null) {
             return null;
         }
         
-        return `https://www.bungie.net/en/ClanV2?groupid=${this.clan_id}`;
+        return `https://www.bungie.net/en/ClanV2?groupid=${this.clanBungieNum}`;
     }
 }
 

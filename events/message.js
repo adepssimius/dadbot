@@ -22,13 +22,13 @@ module.exports = async (message) => {
 
     // If we find the prefix, attempt to process the command
     if (message.content.startsWith(client.config.prefix)) {
-        const syncChannels = await SyncChannel.get({channel_id: message.channel.id});
-        
-        if (syncChannels.length != 0) {
-            message.channel.send('Commands not accepted within a synchronization channel');
-        } else {
+        //const syncChannels = await SyncChannel.get({channel_id: message.channel.id});
+        //
+        //if (syncChannels.length != 0) {
+        //    message.channel.send('Commands not accepted within a synchronization channel');
+        //} else {
             client.runCommand(message);
-        }
+        //}
     
     // Otherwise, attempt to send the message to the synchronization group
     } else {

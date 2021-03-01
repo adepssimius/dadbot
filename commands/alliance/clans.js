@@ -32,7 +32,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         return;
     }
     
-    const alliances = await Alliance.getByGuildID({guild_id: message.guild.id});
+    const alliances = await Alliance.get({guildId: message.guild.id});
     
     if (alliances.length == 0) {
         message.channel.send(`This discord clan is not in an alliance`);
@@ -40,9 +40,9 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     }
     
     const alliance = alliances[0];
-    const guilds = await Guild.get({alliance_id: alliance.alliance_id});
+    const guilds = await Guild.get({allianceId: alliance.id});
     
-    let response = `**${alliance.alliance_name}** - ${guilds.length} `;
+    let response = `**${alliance.name}** - ${guilds.length} `;
     if (guilds.length == 0 || guilds.length > 1) {
         response += 'clans';
     } else {

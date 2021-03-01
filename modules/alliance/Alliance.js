@@ -3,41 +3,36 @@
 const ROOT = '../..';
 
 // Load our classes
-const BaseModel       = require(`${ROOT}/modules/BaseModel`);
-const DuplicateError  = require(`${ROOT}/modules/error/DuplicateError`);
-const ForeignKeyError = require(`${ROOT}/modules/error/ForeignKeyError`);
-const Snowflake       = require(`${ROOT}/modules/Snowflake`);
+const BaseModel      = require(`${ROOT}/modules/BaseModel`);
+const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
+const Snowflake      = require(`${ROOT}/modules/Snowflake`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
-const knex   = require(`${ROOT}/modules/Database`);
 
 class Alliance extends BaseModel {
     static tableName = 'alliance';
-    static orderBy   = 'alliance_name';
+    static orderBy   = 'name';
+    static fields    = ['id', 'name', 'short_name', 'creator_id'];
+    static fieldMap  = BaseModel.getFieldMap(Alliance.fields);
     
     constructor(data) {
-        super({});
-        this.data = data;
+        super(Alliance, data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
     
-    get alliance_id() {
-        return this.data.alliance_id;
+    get name() {
+        return this.data.name;
     }
     
-    get alliance_name() {
-        return this.data.alliance_name;
+    get shortName() {
+        return this.data.short_name;
     }
     
-    get alliance_alias() {
-        return this.data.alliance_alias;
-    }
-    
-    get creator_id() {
+    get creatorId() {
         return this.data.creator_id;
     }
     
@@ -45,19 +40,19 @@ class Alliance extends BaseModel {
     // * Setters * //
     // *********** //
     
-    set alliance_id(value) {
-        this.data.alliance_id = value;
+    set name(value) {
+        this.data.name = value;
     }
     
-    set alliance_name(value) {
-        this.data.alliance_name = value;
+    set shortName(value) {
+        if (value == null) {
+            this.data.short_name = null;
+        } else {
+            this.data.short_name = value.toUpperCase();
+        }
     }
     
-    set alliance_alias(value) {
-        this.data.alliance_alias = value.toUpperCase();
-    }
-    
-    set creator_id(value) {
+    set creatorId(value) {
         this.data.creator_id = value;
     }
     
@@ -65,91 +60,75 @@ class Alliance extends BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    // Standard get and create functions
-    
-    static async get(whereClause) {
-        // Always search alliance_alias in upper case
-        if (whereClause != null && whereClause.alliance_alias != null) {
-            whereClause.alliance_alias = whereClause.alliance_alias.toUpperCase();
+    static async get(objCondition) {
+        const BaseModel = require(`${ROOT}/modules/BaseModel`);
+        let condition;
+        
+        if (objCondition == null) {
+            condition = null;
+        
+        } else if (objCondition.nameOrShortName != null) {
+            condition = (query) => {
+                query.where('name', objCondition.nameOrShortName.name)
+                    .orWhere('short_name', objCondition.nameOrShortName.shortName.toUpperCase());
+            };
+        
+        } else if (objCondition.guildId != null) {
+            const Guild = require(`${ROOT}/modules/alliance/Guild`);
+            condition = (query) => {
+                query.whereIn('id', function() {
+                    this.select('alliance_id').from(Guild.tableName).where('id', objCondition.guildId);
+                });
+            };
+        
+        } else {
+            condition = BaseModel.parseObjCondition(Alliance, objCondition);
+            
+            if (condition.shortName != null) {
+                condition.shortName = condition.shortName.toUpperCase();
+            }
         }
         
-        let result = [];
-        let rows = await this._get(whereClause);
-        
-        for (let x = 0; x < rows.length; x++) {
-            result.push(new Alliance(rows[x]));
-        }
-        
-        return result;
-    }
-    
-    static async create(data) {
-        if (data != null && data.alliance_alias != null) {
-            data.alliance_alias = data.alliance_alias.toUpperCase();
-        }
-        
-        const alliances = await Alliance.getByNameOrAlias(data);
-        if (alliances.length > 0) {
-            const alliance = alliances[0];
-            throw new DuplicateError(`Existing alliance found with the same name or alias: ${alliance.alliances_name} [${alliance.alliance_alias}]`);
-        }
-        
-        data.alliance_id = Snowflake.generate();
-        const result = await this._create(data); // eslint-disable-line no-unused-vars
-        return new Alliance(data);
-    }
-    
-    // Extra functions for this class
-    
-    static async getByNameOrAlias(data) {
-        return await Alliance.get( (query) =>
-            query.where('alliance_name', data.alliance_name).orWhere('alliance_alias', data.alliance_alias.toUpperCase())
-        );
-    }
-    
-    static async getByGuildID(data) {
-        const Guild = require(`${ROOT}/modules/alliance/Guild`);
-        
-        return await Alliance.get( (query) =>
-            query.whereIn('alliance_id', function() {
-                this.select('alliance_id').from(Guild.tableName).where('guild_id', data.guild_id);
-            })
-        );
+        return await BaseModel.get(Alliance, condition);
     }
     
     // ******************** //
     // * Instance Methods * //
     // ******************** //
     
-    async update() {
-        this.updated_at = knex.fn.now();
+    async create() {
+        const alliances = await Alliance.get({
+            'nameOrShortName': {
+                name: this.name,
+                shortName: this.shortName
+            }
+        });
         
-        let data = {
-            alliance_name: this.alliance_name,
-            alliance_alias: this.alliance_alias,
-            updated_at: this.updated_at
-        };
-        
-        let rowsChanged = await knex(Alliance.tableName)
-            .where('alliance_id', this.alliance_id)
-            .update(data)
-            .then(result => {
-                return result;
-            });
-        
-        if (rowsChanged == 0) {
-            throw new Error('Update did not change any records!');
-        } else if (rowsChanged > 1) {
-            throw new Error('Update changed more then one record!');
+        // Check if this is a duplicate alliance
+        if (alliances.length > 0) {
+            throw new DuplicateError(`Existing alliance found with the same name or short name: ${this.name} [${this.shortName}]`);
         }
+        
+        // Create the ID for this alliance
+        this.id = Snowflake.generate();
+        
+        // And attempt to create the damn thing
+        const BaseModel = require(`${ROOT}/modules/BaseModel`);
+        await BaseModel.create(Alliance.tableName, this.data);
+    }
+    
+    async update() {
+        const BaseModel = require(`${ROOT}/modules/BaseModel`);
+        await BaseModel.update(Alliance.tableName, this.data);
     }
     
     async delete() {
-        return await Alliance._delete({alliance_id: this.alliance_id});
+        const BaseModel = require(`${ROOT}/modules/BaseModel`);
+        await BaseModel.delete(Alliance.tableName, this.data);
     }
     
     getTitle() {
-        return `${this.alliance_name} [this.alliance_alias]`;
+        return `${this.name} [${this.shortName}]`;
     }
 }
 

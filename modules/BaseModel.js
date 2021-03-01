@@ -9,19 +9,22 @@ const knex   = require(`${ROOT}/modules/Database`);
 class BaseModel {
     static tableName = null;
     static orderBy   = 'created_at';
+    static fields    = [];
+    static fieldMap  = null;
     
     data = {};
     
-    constructor(data) {
-        // Populate id for all classes pretty much
-        if (data.id != null) this.id = data.id;
-        
-        // Populate standard fields with different database and object names
-        if      (data.created_at != null) this.createdAt = data.created_at;
-        else if (data.createdAt  != null) this.createdAt = data.createdAt;
-        
-        if      (data.updated_at != null) this.updatedAt = data.update_at;
-        else if (data.updatedAt  != null) this.updatedAt = data.updatedAt;
+    constructor(ChildClass, data) {
+        // Iterate over the incoming field data
+        for (const field in data) {
+            const objField = ChildClass.fieldMap.allFields.get(field);
+            
+            if (objField == null) {
+                throw new Error(`Unrecognized field - ${field}`);
+            }
+            
+            this[objField] = data[field];
+        }
         
         // Check if this is a new object
         if ( (this.createdAt == null) && (this.updatedAt == null)) {
@@ -88,51 +91,55 @@ class BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    static get(conditions) {
-        return null;
-    }
+    //static get(conditions) {
+    //    return null;
+    //}
     
-    static async _get(conditions) {
-        if (conditions != null) {
-            return await knex(this.tableName)
-                .where(conditions)
+    static async get(ChildClass, condition) {
+        let rows;
+        
+        if (condition != null) {
+            rows = await knex(ChildClass.tableName)
+                .where(condition)
                 .orderBy(this.orderBy)
                 .then(function(rows) {
                     return rows;
                 });
         } else {
-            return await knex(this.tableName)
+            rows = await knex(ChildClass.tableName)
                 .orderBy(this.orderBy)
                 .then(function(rows) {
                     return rows;
                 });
         }
-    }
-    
-    static async create(data) {
-        return null;
-    }
-    
-    static async _create(data) {
-        const timestamp = knex.fn.now();
-        data.created_at = timestamp;
-        data.updated_at = timestamp;
         
-        return await knex(this.tableName)
-            .insert(data)
-            .then(function(result) {
-                return result;
-            });
+        const result = [];
+        for (let x = 0; x < rows.length; x++) {
+            result.push(new ChildClass(rows[x]));
+        }
+        return result;
     }
     
-    static async _delete(query) {
-        return await knex(this.tableName)
-            .where(query)
-            .delete()
-            .then(result => {
-                return result;
-            });
-    }
+    //static async _create(data) {
+    //    const timestamp = knex.fn.now();
+    //    data.created_at = timestamp;
+    //    data.updated_at = timestamp;
+    //    
+    //    return await knex(this.tableName)
+    //        .insert(data)
+    //        .then(function(result) {
+    //            return result;
+    //        });
+    //}
+    
+    //static async _delete(condition) {
+    //    return await knex(this.tableName)
+    //        .where(condition)
+    //        .delete()
+    //        .then(result => {
+    //            return result;
+    //        });
+    //}
     
     // ******************** //
     // * Instance Methods * //
@@ -146,8 +153,82 @@ class BaseModel {
             });
     }
     
-    async delete(data) {
-        return null;
+    static async update(tableName, data, condition) {
+        if (condition == null) {
+            condition = {id: data.id};
+        }
+        
+        // Update the timestamp
+        this.updatedAt = knex.fn.now();
+        
+        const rowsChanged = await knex(tableName)
+            .where(condition)
+            .update(data)
+            .then(result => {
+                return result;
+            });
+        
+        if (rowsChanged == 0) {
+            throw new Error('Update did not change any records!');
+        } else if (rowsChanged > 1) {
+            throw new Error('Update changed more then one record!');
+        }
+        
+        return rowsChanged;
+    }
+    
+    static async delete(tableName, data, condition) {
+        if (condition == null) {
+            condition = {id: data.id};
+        }
+        
+        return await knex(tableName)
+            .where(condition)
+            .delete()
+            .then(result => {
+                return result;
+            });
+    }
+    
+    static getFieldMap(fields) {
+        const allFieldMap = new Map();
+        const objFieldMap = new Map();
+        
+        fields.push('created_at', 'updated_at');
+        
+        for (let x = 0; x < fields.length; x++) {
+            const dbField = fields[x];
+            const objField = BaseModel.snakeToCamel(dbField);
+            
+            objFieldMap.set(objField, dbField);
+            allFieldMap.set(objField, objField);
+            
+            if (dbField != objField) {
+                allFieldMap.set(dbField, objField);
+            }
+        }
+        
+        return {allFields: allFieldMap, objFields: objFieldMap};
+    }
+    
+    static snakeToCamel(str) {
+        return str.replace( /([-_][a-z])/g, (group) => group.toUpperCase().replace('_', '') );
+    }
+    
+    static parseObjCondition(ChildClass, objCondition) {
+        const condition = {};
+        
+        for (const objField in objCondition) {
+            const dbField = ChildClass.fieldMap.objFields.get(objField);
+            
+            if (dbField == null) {
+                throw new Error(`Unrecognized field - ${objField}`);
+            }
+            
+            condition[dbField] = objCondition[objField];
+        }
+        
+        return condition;
     }
 }
 

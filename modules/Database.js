@@ -20,9 +20,10 @@ knex.schema.hasTable('guardian').then(function(exists) {
             table.string('id', 20).notNullable();
             table.primary('id');
             
-            table.string('timezone', 32).notNullable();
+            table.string ('timezone', 32).notNullable();
+            table.boolean('private_event_default').notNullable();
             table.timestamps(false, true);
-            
+        
         }).then(client.logger.log('Created Table: guardian'));
     }
 });
@@ -30,13 +31,13 @@ knex.schema.hasTable('guardian').then(function(exists) {
 knex.schema.hasTable('guild').then(function(exists) {
     if (!exists) {
         knex.schema.createTable('guild', function (table) {
-            table.string('guild_id', 20).notNullable();
-            table.primary('guild_id');
+            table.string('id', 20).notNullable();
+            table.primary('id');
             
-            table.string ('alliance_id', 20).notNullable();
+            table.string ('alliance_id', 20);
             table.string ('clan_name', 25);
-            table.string ('clan_alias', 4);
-            table.integer('clan_id');
+            table.string ('clan_short_name', 4);
+            table.integer('clan_bungie_num');
             table.string ('timezone', 32);
             table.timestamps();
             
@@ -45,7 +46,7 @@ knex.schema.hasTable('guild').then(function(exists) {
             //
             
             //table.foreign('alliance_id', 'guild_fk1')
-            //    .references('alliance_id')
+            //    .references('id')
             //    .inTable('alliance');
             
         }).then(client.logger.log('Created Table: guild'));
@@ -55,11 +56,11 @@ knex.schema.hasTable('guild').then(function(exists) {
 knex.schema.hasTable('alliance').then(function(exists) {
     if (!exists) {
         knex.schema.createTable('alliance', function (table) {
-            table.string('alliance_id', 20).notNullable();
-            table.primary('alliance_id');
+            table.string('id', 20).notNullable();
+            table.primary('id');
             
-            table.string('alliance_name', 32).notNullable();
-            table.string('alliance_alias', 4).notNullable();
+            table.string('name', 32).notNullable();
+            table.string('short_name', 4).notNullable();
             table.string('creator_id', 20).notNullable();
             table.timestamps(false, true);
             
@@ -78,14 +79,14 @@ knex.schema.hasTable('alliance').then(function(exists) {
 knex.schema.hasTable('alliance_parameter').then(function(exists) {
     if (!exists) {
         knex.schema.createTable('alliance_parameter', function (table) {
-            table.string('parameter_id', 20).notNullable();
-            table.primary('parameter_id');
+            table.string('id', 20).notNullable();
+            table.primary('id');
             
             table.string('alliance_id', 20).notNullable();
-            table.string('parameter_name', 32).notNullable();
-            table.string('parameter_value', 4096);
-            table.string('updater_id', 20).notNullable();
+            table.string('name', 32).notNullable();
+            table.string('value', 4096);
             table.string('creator_id', 20).notNullable();
+            table.string('updater_id', 20).notNullable();
             table.timestamps(false, true);
             
             //
@@ -93,7 +94,7 @@ knex.schema.hasTable('alliance_parameter').then(function(exists) {
             //
             
             //table.foreign('alliance_id', 'alliance_parameter_fk1')
-            //    .references('alliance_id')
+            //    .references('id')
             //    .inTable('alliance');
             
             //table.foreign('creator_id', 'alliance_parameter_fk2')
@@ -103,7 +104,7 @@ knex.schema.hasTable('alliance_parameter').then(function(exists) {
             //table.foreign('updater_id', 'alliance_parameter_fk3')
             //    .references('id')
             //    .inTable('guardian');
-            
+        
         }).then(client.logger.log('Created Table: alliance_parameter'));
     }
 });
@@ -112,26 +113,26 @@ knex.schema.hasTable('alliance_parameter').then(function(exists) {
 // * Channel Synchronization Tables * //
 // ********************************** //
 
-knex.schema.hasTable('sync_group').then(function(exists) {
+knex.schema.hasTable('channel_group').then(function(exists) {
     if (!exists) {
-        knex.schema.createTable('sync_group', function (table) {
-            table.string('sync_group_id', 20).notNullable();
-            table.primary('sync_group_id');
+        knex.schema.createTable('channel_group', function (table) {
+            table.string('id', 20).notNullable();
+            table.primary('id');
             
             table.string('name', 32).notNullable();
             table.timestamps(false, true);
-        }).then(client.logger.log('Created Table: sync_group'));
+        }).then(client.logger.log('Created Table: channel_group'));
     }
 });
 
 knex.schema.hasTable('channel').then(function(exists) {
     if (!exists) {
         knex.schema.createTable('channel', function (table) {
-            table.string('channel_id', 20).notNullable();
-            table.primary(['channel_id']);
+            table.string('id', 20).notNullable();
+            table.primary(['id']);
             
-            table.string('sync_group_id', 20).notNullable();
             table.string('guild_id', 20).notNullable();
+            table.string('channel_group_id', 20).notNullable();
             table.string('webhook_id', 20).notNullable();
             table.string('webhook_url', 256).notNullable();
             table.timestamps(false, true);
@@ -140,14 +141,13 @@ knex.schema.hasTable('channel').then(function(exists) {
             // Foreign Keys
             //
             
-            //table.foreign('sync_group_id', 'channel_fk1')
-            //    .references('sync_group_id')
-            //    .inTable('sync_group');
-            
-            // TODO - Add this in when we integrate the guild table into the code
-            //table.foreign('guild_id', 'channel_fk2')
-            //    .references('guild_id')
+            //table.foreign('guild_id', 'channel_fk1')
+            //    .references('id')
             //    .inTable('guild');
+            
+            //table.foreign('channel_group_id', 'channel_fk2')
+            //    .references('id')
+            //    .inTable('channel_group');
             
         }).then(client.logger.log('Created Table: channel'));
     }
@@ -156,49 +156,53 @@ knex.schema.hasTable('channel').then(function(exists) {
 knex.schema.hasTable('message').then(function(exists) {
     if (!exists) {
         knex.schema.createTable('message', function (table) {
-            table.string('message_id', 20).notNullable();
-            table.primary(['message_id']);
+            table.string('id', 20).notNullable();
+            table.primary(['id']);
             
-            table.string ('sync_group_id', 20).notNullable();
             table.string ('channel_id', 20).notNullable();
             table.string ('guild_id', 20).notNullable();
-            table.boolean('is_clone').notNullable().defaultTo(false);
             table.string ('orig_message_id', 20);
             table.string ('orig_channel_id', 20);
             table.string ('orig_guild_id', 20);
+            table.string ('sync_group_id', 20).notNullable();
+            table.boolean('is_clone').notNullable().defaultTo(false);
             table.string ('content', 2000);
+            table.string ('author_id', 20).notNullable();
             table.timestamps(false, true);
             
             //
             // Foreign Keys
             //
             
-            //table.foreign('sync_group_id', 'message_fk1')
-            //    .references('sync_group_id')
-            //    .inTable('sync_group');
-            
-            //table.foreign('channel_id', 'message_fk2')
-            //    .references('channel_id')
+            //table.foreign('channel_id', 'message_fk1')
+            //    .references('id')
             //    .inTable('channel');
             
             // TODO - Add this in when we integrate the guild table into the code
-            //table.foreign('guild_id', 'message_fk3')
-            //    .references('guild_id')
+            //table.foreign('guild_id', 'message_fk2')
+            //    .references('id')
             //    .inTable('guild');
             
-            //table.foreign('orig_message_id', 'message_fk4')
-            //    .references('message_id')
+            //table.foreign('orig_message_id', 'message_fk3')
+            //    .references('id')
             //    .inTable('message');
             
-            //table.foreign('orig_channel_id', 'message_fk5')
-            //    .references('channel_id')
+            //table.foreign('orig_channel_id', 'message_fk4')
+            //    .references('id')
             //    .inTable('channel');
             
-            // TODO - Add this in when we integrate the guild table into the code
-            //table.foreign('orig_guild_id', 'message_fk6')
-            //    .references('guild_id')
+            //table.foreign('orig_guild_id', 'message_fk5')
+            //    .references('id')
             //    .inTable('guild');
             
+            //table.foreign('channel_group_id', 'message_fk6')
+            //    .references('id')
+            //    .inTable('channel_group');
+            
+            //table.foreign('author_id', 'message_fk7')
+            //    .references('id')
+            //    .inTable('guardian');
+        
         }).then(client.logger.log('Created Table: message'));
     }
 });
@@ -210,10 +214,10 @@ knex.schema.hasTable('message').then(function(exists) {
 knex.schema.hasTable('activity_category').then(function(exists) {
     if (!exists) {
         knex.schema.createTable('activity_category', function (table) {
-            table.string('category_id', 20).notNullable();
-            table.primary('category_id');
+            table.string('id', 20).notNullable();
+            table.primary('id');
             
-            table.string('category_name', 32).notNullable();
+            table.string('name', 32).notNullable();
             table.string('symbol', 1).notNullable();
             table.string('alliance_id', 20);
             table.string('creator_id', 20).notNullable();
@@ -224,7 +228,7 @@ knex.schema.hasTable('activity_category').then(function(exists) {
             //
             
             //table.foreign('alliance_id', 'activity_category_fk1')
-            //    .references('alliance_id')
+            //    .references('id')
             //    .inTable('alliance');
             
             //table.foreign('creator_id', 'activity_category_fk2')
@@ -238,11 +242,11 @@ knex.schema.hasTable('activity_category').then(function(exists) {
 knex.schema.hasTable('activity').then(function(exists) {
     if (!exists) {
         knex.schema.createTable('activity', function (table) {
-            table.string('activity_id', 20).notNullable();
-            table.primary('activity_id');
+            table.string('id', 20).notNullable();
+            table.primary('id');
             
-            table.string ('activity_name', 32).notNullable();
-            table.string ('category_id', 20).notNullable();
+            table.string ('name', 32).notNullable();
+            table.string ('activity_category_id', 20).notNullable();
             table.integer('fireteam_size').notNullable();
             table.integer('est_max_duration').notNullable();
             table.string ('alliance_id', 20);
@@ -253,12 +257,12 @@ knex.schema.hasTable('activity').then(function(exists) {
             // Foreign Keys
             //
             
-            //table.foreign('category_id', 'activity_fk1')
-            //    .references('category_id')
+            //table.foreign('activity_category_id', 'activity_fk1')
+            //    .references('id')
             //    .inTable('activity_category');
             
             //table.foreign('alliance_id', 'activity_fk2')
-            //    .references('alliance_id')
+            //    .references('id')
             //    .inTable('alliance');
             
             //table.foreign('creator_id', 'activity_fk3')
@@ -286,11 +290,11 @@ knex.schema.hasTable('activity_alias').then(function(exists) {
             //
             
             //table.foreign('activity_id', 'activity_alias_fk1')
-            //    .references('activity_id')
+            //    .references('id')
             //    .inTable('activity');
             
             //table.foreign('alliance_id', 'activity_alias_fk2')
-            //    .references('alliance_id')
+            //    .references('id')
             //    .inTable('alliance');
             
             //table.foreign('creator_id', 'activity_alias_fk3')
@@ -327,20 +331,20 @@ knex.schema.hasTable('event').then(function(exists) {
             //
             
             //table.foreign('alliance_id', 'event_fk1')
-            //    .references('alliance_id')
+            //    .references('id')
             //    .inTable('alliance');
             
             //table.foreign('activity_id', 'event_fk2')
-            //    .references('activity_id')
+            //    .references('id')
             //    .inTable('activity');
             
             //table.foreign('category_id', 'event_fk3')
-            //    .references('category_id')
+            //    .references('id')
             //    .inTable('event_category');
             
             // TODO - Add this in when we integrate the guild table into the code
             //table.foreign('guild_id', 'event_fk4')
-            //    .references('guild_id')
+            //    .references('id')
             //    .inTable('guild');
             
             //table.foreign('creator_id', 'event_fk5')
@@ -370,7 +374,7 @@ knex.schema.hasTable('event_channel').then(function(exists) {
             //
             
             //table.foreign('channel_id', 'event_channel_fk1')
-            //    .references('channel_id')
+            //    .references('id')
             //    .inTable('channel');
             
             //table.foreign('event_id', 'event_channel_fk2')
@@ -378,7 +382,7 @@ knex.schema.hasTable('event_channel').then(function(exists) {
             //    .inTable('event');
             
             //table.foreign('channel_guild_id', 'event_channel_fk3')
-            //    .references('guild_id')
+            //    .references('id')
             //    .inTable('guild');
             
         }).then(client.logger.log('Created Table: event_channel'));
@@ -390,7 +394,7 @@ knex.schema.hasTable('participant').then(function(exists) {
         knex.schema.createTable('participant', function (table) {
             table.string('guardian_id', 20).notNullable();
             table.string('event_id', 20).notNullable();
-            table.primary('guardian_id', 'event_id');
+            table.primary(['guardian_id', 'event_id']);
             
             table.string('joined_from_channel_id', 20).notNullable();
             table.string('joined_from_guild_id', 20).notNullable();
@@ -410,11 +414,11 @@ knex.schema.hasTable('participant').then(function(exists) {
             //    .inTable('guardian');
             
             //table.foreign('channel_id', 'activity_member_fk3')
-            //    .references('channel_id')
+            //    .references('id')
             //    .inTable('channel');
             
             //table.foreign('guild_id', 'activity_member_fk4')
-            //    .references('guild_id')
+            //    .references('id')
             //    .inTable('guild');
             
         }).then(client.logger.log('Created Table: participant'));

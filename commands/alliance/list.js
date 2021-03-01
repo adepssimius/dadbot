@@ -44,7 +44,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         const allianceListElements = [];
         for (let x = 0; x < alliances.length; x++) {
             const alliance = alliances[x];
-            allianceListElements.push(`${alliance.alliance_name} [${alliance.alliance_alias}]`);
+            allianceListElements.push(alliance.getTitle());
         }
         response += '```' + allianceListElements.join('\n') + '```';
     }

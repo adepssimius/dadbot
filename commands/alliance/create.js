@@ -34,7 +34,7 @@ const run = async (message, args, level) => {
     }
     
     // Grab the symbol from the end and then merge the rest for the category name
-    const alias = args.pop();
+    const shortName = args.pop();
     const name = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
     
     // Validate the name
@@ -43,33 +43,47 @@ const run = async (message, args, level) => {
         return;
     }
     
-    // Validate the symbol
-    if (alias.length > 4) {
-        message.channel.send('Alliance alias cannot be more then 4 characters in length');
+    // Validate the short name
+    if (shortName.length > 4) {
+        message.channel.send('Alliance short name cannot be more then 4 characters in length');
         return;
     }
     
     // See if this guild is already in an alliance
-    const guilds = await Guild.get({guild_id: message.guild.id});
+    const guilds = await Guild.get({id: message.guild.id});
     
-    if ( (guilds.length > 0) && (guilds[0].alliance_id != null) ) {
-        message.channel.send('This discord is already part of an alliance');
+    if (guilds.length > 0 && guilds[0].allianceId != null) {
+        message.channel.send('This clan discord is already part of an alliance');
         return;
     }
     
-    // Put the data object together
-    const data = {
-        alliance_name: name,
-        alliance_alias: alias,
-        creator_id: message.author.id
-    };
+    // Create the alliance object
+    const alliance = await new Alliance({
+        name: name,
+        shortName: shortName,
+        creatorId: message.author.id
+    });
     
     // Attempt to create the alliance
     try {
-        const alliance = await Alliance.create(data);
-        const guild = await Guild.create({guild_id: message.guild.id, alliance_id: alliance.alliance_id});
+        await alliance.create();
         
-        message.channel.send(`Alliance created with this discord as the first member`);
+        // Join the alliance
+        let guild;
+        
+        if (guilds.length == 0) {
+            guild = await new Guild({
+                id: message.guild.id,
+                allianceId: alliance.allianceId
+            });
+            await guild.create();
+        } else {
+            guild = guilds[0];
+            guild.allianceId = alliance.id;
+            guild.update();
+        }
+        
+        message.channel.send(`Alliance created with this clan discord as the first member`);
         
         client.logger.debug('Alliance:');
         client.logger.dump(alliance);
@@ -81,7 +95,7 @@ const run = async (message, args, level) => {
         if (error instanceof DuplicateError) {
             client.replyWithError(error.message, message);
         } else {
-            const label = `${data.category_name} [${data.symbol}]`;
+            const label = `${name} [${shortName}]`;
             client.replyWithErrorAndDM(`Creation of alliance failed: ${label}`, message, error);
         }
     }

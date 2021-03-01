@@ -33,7 +33,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     
     if (args.length > 0) {
         const value = args.join(' ').replace(/^"(.+)"$/g, "$1").replace(/^'(.+)'$/g, "$1");
-        const alliances = await Alliance.getByNameOrAlias({alliance_name: value, alliance_alias: value});
+        const alliances = await Alliance.get({nameOrShortName: {name: value, shortName: value}});
         
         if (alliances.length == 0) {
             message.channel.send(`Could not find alliance: '${value}'`);
@@ -42,10 +42,10 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         alliance = alliances[0];
     
     } else {
-        const alliances = await Alliance.getByGuildID({guild_id: message.guild.id});
+        const alliances = await Alliance.get({guildId: message.guild.id});
         
         if (alliances.length == 0) {
-            message.channell.send(`This discord clan is not in an alliance`);
+            message.channel.send(`This clan discord is not in an alliance`);
             return;
         }
         alliance = alliances[0];
@@ -54,9 +54,9 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     const embed = new Discord.MessageEmbed()
         .setTitle('Alliance')
         .addFields(
-            { name: 'Alliance Name', value: alliance.alliance_name },
-            { name: 'Alliance Alias', value: alliance.alliance_alias }
+            { name: 'Name', value: alliance.name },
+            { name: 'Short Name', value: alliance.shortName }
         );
-    message.channel.send(embed);
+    await message.channel.send(embed);
 };
 exports.run = run;
