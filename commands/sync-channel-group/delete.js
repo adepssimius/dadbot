@@ -3,6 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
+const Alliance         = require(`${ROOT}/modules/alliance/Alliance`);
 const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
 
 // Load singletons
@@ -31,15 +32,21 @@ const run = async (message, args, level) => {
         return;
     }
     
-    const name = args[0];
-    const syncChannelGroups = await SyncChannelGroup.get({name: name});
-    
-    if (syncChannelGroups.length == 0) {
-        message.channel.send(`Could not find a channel synchronization group named '${name}'`);
+    // Get the alliance for this guild
+    const alliance = Alliance.get({guildId: message.guild.id, unique: true});
+    if (alliance == null) {
+        message.channel.send(`Discord clan must be in an alliance to create a channel synchronization group`);
         return;
     }
     
-    const syncChannelGroup = syncChannelGroups[0];
+    // Grab the name
+    const name = args[0];
+    const syncChannelGroup = await SyncChannelGroup.get({name: name, allianceId: alliance.id, unique: true});
+    
+    if (syncChannelGroup == null) {
+        message.channel.send(`Could not find a channel synchronization group named '${name}'`);
+        return;
+    }
     
     try {
         await syncChannelGroup.delete();

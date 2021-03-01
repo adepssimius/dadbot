@@ -95,7 +95,10 @@ module.exports = (client) => {
         
         // Check whether the command or alias exists
         const command = client.commands.get(commandName) || client.commands.get(client.aliases.get(commandName));
-        if (!command) return;
+        if (!command) {
+            message.channel.send(`Unrecognized command: ${client.config.prefix}${commandName}`);
+            return;
+        }
         
         // Some commands may not be useable in DMs
         if (command && !message.guild && command.conf.guildOnly) {
@@ -122,7 +125,10 @@ module.exports = (client) => {
         //
         
         const action  = command.actions.get(actionName) || command.actions.get(command.actionAliases.get(actionName));
-        if (!action) return;
+        if (!action) {
+            message.channel.send(`Unrecognized command action: ${client.config.prefix}${command.help.name} ${actionName}`);
+            return;
+        }
         
         // Some commands may not be useable in DMs
         if (action  && !message.guild && action.conf.guildOnly) {

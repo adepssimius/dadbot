@@ -79,24 +79,49 @@ class BaseModel {
     
     static async get(conditions = {}) {
         let parsedConditions = conditions;
+        let unique = false;
         
+        // Parse the select conditions
         if (typeof parsedConditions == 'object') {
+            if (parsedConditions.unique != null) {
+                unique = parsedConditions.unique;
+                delete parsedConditions.unique;
+            }
+            
             parsedConditions = this.parseConditions(parsedConditions);
             parsedConditions = this.parseFieldConditions(parsedConditions);
         }
         
+        // Execute the select and gather the results
         const rows = await knex(this.tableName)
             .where(parsedConditions)
             .orderBy(this.orderBy)
             .then(function(rows) {
                 return rows;
             });
-
-        const result = [];
+        
+        const objects = [];
         for (let x = 0; x < rows.length; x++) {
-            result.push(new this(rows[x]));
+            objects.push(new this(rows[x]));
         }
-        return result;
+        
+        // Handle this extra carefully if a unique result was expected
+        if (unique) {
+            if (objects.length > 1) {
+                throw new Error(`Found ${objects.length} records from ${this.tableName} when only one was expected`);
+            }
+            return ( objects.length == 0 ? null : objects[0] );
+        }
+        
+        // Otherwise just return the array of objects
+        return objects;
+    }
+    
+    static async getUnique(conditions = {}) {
+        const conditionsWithUnique = conditions;
+        conditionsWithUnique.unique = true;
+        
+        return this.get(conditionsWithUnique);
     }
     
     static parseConditions(conditions) {

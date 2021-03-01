@@ -3,6 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
+const Alliance         = require(`${ROOT}/modules/alliance/Alliance`);
 const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
 const SyncChannel      = require(`${ROOT}/modules/sync/SyncChannel`);
 
@@ -32,7 +33,15 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         return;
     }
     
-    const syncChannelGroups = await SyncChannelGroup.get();
+    // Get the alliance for this guild
+    const alliance = Alliance.get({guildId: message.guild.id, unique: true});
+    if (alliance == null) {
+        message.channel.send(`Discord clan must be in an alliance to be part of any channel synchronization groups`);
+        return;
+    }
+    
+    // Get the channel synchronization groups for this alliance
+    const syncChannelGroups = await SyncChannelGroup.get({allianceId: alliance.id});
     
     let response = `Found ${syncChannelGroups.length} channel synchronization group`;
     if (syncChannelGroups.length != 1) {

@@ -3,6 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
+const Alliance         = require(`${ROOT}/modules/alliance/Alliance`);
 const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
 const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
 
@@ -32,27 +33,31 @@ const run = async (message, args, level) => {
         return;
     }
     
+    // Get the alliance for this guild
+    const alliance = Alliance.get({guildId: message.guild.id, unique: true});
+    if (alliance == null) {
+        message.channel.send(`Discord clan must be in an alliance to create a channel synchronization group`);
+        return;
+    }
+    
     // Grab the name
     const name = args[0];
     
-    // Create the channel group object
-    const syncChannelGroup = await new SyncChannelGroup({name: name});
+    // Create the channel synchronization group object
+    const syncChannelGroup = await new SyncChannelGroup({name: name, allianceId: alliance.id});
     
     try {
         syncChannelGroup.create();
-        message.channel.send(`Created sync group: ${name}`);
+        message.channel.send(`Created channel synchronization group: ${name}`);
         
-        client.logger.debug('Sync Channel Group:');
+        client.logger.debug('Channel Synchronization Group:');
         client.logger.dump(syncChannelGroup);
     } catch (error) {
         if (error instanceof DuplicateError) {
             message.channel.send(error.message);
             return;
         } else {
-            const details = `Error creating channel synchronization group '${name}'`;
-            message.channel.send(details);
-            client.logger.error(details);
-            client.logger.dump(error);
+            client.replyWithErrorAndDM(`Creation of channel synchronization group failed: ${name}}`, message, error);
         }
     }
 };

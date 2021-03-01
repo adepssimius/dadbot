@@ -13,7 +13,7 @@ const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unus
 class SyncChannelGroup extends BaseModel {
     static tableName = 'channel_group';
     static orderBy   = 'name';
-    static fields    = ['id','name'];
+    static fields    = ['id', 'name'];
     static fieldMap  = BaseModel.getFieldMap(SyncChannelGroup.fields);
     
     constructor(data) {
@@ -51,11 +51,11 @@ class SyncChannelGroup extends BaseModel {
     // ******************** //
     
     async create() {
-        const syncChannelGroups = await SyncChannelGroup.get({name: this.name});
+        const syncChannelGroups = await SyncChannelGroup.get({name: this.name, allianceId: this.allianceId});
         
         // Check if this is a duplicate group
         if (syncChannelGroups.length > 0) {
-            throw new DuplicateError(`There is already a channel synchronization group called '${this.name}'`);
+            throw new DuplicateError(`There is already a channel synchronization group in this alliance called '${this.name}'`);
         }
         
         // Create the ID for this group

@@ -17,7 +17,7 @@ const http_delete = require(`${ROOT}/modules/Functions`).http_delete;
 class SyncChannel extends BaseModel {
     static tableName = 'channel';
     static orderBy   = 'created_at';
-    static fields    = ['guild_id', 'channel_group_id', 'webhook_id', 'webhook_url'];
+    static fields    = ['id', 'guild_id', 'channel_group_id', 'webhook_id', 'webhook_url'];
     static fieldMap  = BaseModel.getFieldMap(SyncChannel.fields);
     
     constructor(data) {
