@@ -92,6 +92,16 @@ class BaseModel {
             parsedConditions = this.parseFieldConditions(parsedConditions);
         }
         
+        // For debugging purposes, generate the sql
+        const sql = knex(this.tableName)
+            .where(parsedConditions)
+            .orderBy(this.orderBy)
+            .select()
+            .toSQL();
+        
+        client.logger.debug(`Executing SQL: ${sql.sql}`);
+        client.logger.debug(`With Bindings: ${sql.bindings}`);
+        
         // Execute the select and gather the results
         const rows = await knex(this.tableName)
             .where(parsedConditions)

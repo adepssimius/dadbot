@@ -13,7 +13,7 @@ const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unus
 class SyncChannelGroup extends BaseModel {
     static tableName = 'channel_group';
     static orderBy   = 'name';
-    static fields    = ['id', 'name'];
+    static fields    = ['id', 'name', 'alliance_id'];
     static fieldMap  = BaseModel.getFieldMap(SyncChannelGroup.fields);
     
     constructor(data) {
@@ -32,12 +32,20 @@ class SyncChannelGroup extends BaseModel {
         return this.data.name;
     }
     
+    get allianceId() {
+        return this.data.alliance_id;
+    }
+    
     // *********** //
     // * Setters * //
     // *********** //
     
     set name(value) {
         this.data.name = value;
+    }
+    
+    set allianceId(value) {
+        this.data.alliance_id = value;
     }
     
     // ***************** //

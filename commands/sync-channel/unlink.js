@@ -3,8 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const SyncGroup   = require(`${ROOT}/modules/sync/SyncGroup`);
-const SyncChannel = require(`${ROOT}/modules/sync/SyncChannel`);
+const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
+const SyncChannel      = require(`${ROOT}/modules/sync/SyncChannel`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -37,22 +37,19 @@ const run = async (message, args, level) => {
         return;
     }
     
-    const syncChannels = await SyncChannel.get({channel_id: message.channel.id});
-    
-    if (syncChannels.length == 0) {
+    const syncChannel = await SyncChannel.get({id: message.channel.id, unique: true});
+    if (syncChannel == null) {
         message.channel.send(`This channel is not linked to a channel synchronization group`);
         return;
     }
     
-    const syncChannel = syncChannels[0];
-    const syncGroups  = await SyncGroup.get({sync_group_id: syncChannel.sync_group_id});
-    const syncGroup   = syncGroups[0];
-    
+    const syncChannelGroup = await SyncChannelGroup.get({id: syncChannel.channelGroupId, unique: true});
+
     try {
         await syncChannel.delete();
-        message.channel.send(`Channel unlinked from synchronization group '${syncGroup.name}'`);
+        message.channel.send(`Channel unlinked from channel synchronization group: ${syncChannelGroup.name}`);
     } catch (error) {
-        const details = `Error unlinking channel from synchronization group '${syncGroup.name}'`;
+        const details = `Error unlinking channel from channel synchronization group: ${syncChannelGroup.name}`;
         message.channel.send(details);
         client.logger.error(details);
         client.logger.dump(error);

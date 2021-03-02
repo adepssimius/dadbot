@@ -3,9 +3,10 @@
 const ROOT = '../..';
 
 // Load our classes
-const SyncGroup      = require(`${ROOT}/modules/sync/SyncGroup`);
-const SyncChannel    = require(`${ROOT}/modules/sync/SyncChannel`);
-const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
+const Alliance         = require(`${ROOT}/modules/alliance/Alliance`);
+const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
+const SyncChannel      = require(`${ROOT}/modules/sync/SyncChannel`);
+const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -38,20 +39,34 @@ const run = async (message, args, level) => {
         return;
     }
     
-    const syncGroupName = args[0];
-    const syncGroups = await SyncGroup.get({name: syncGroupName});
-    
-    if (syncGroups.length == 0) {
-        message.channel.send(`Could not find a channel synchronization group named '${syncGroupName}'`);
+    // Get the alliance for this guild
+    const alliance = await Alliance.get({guildId: message.guild.id, unique: true});
+    if (alliance == null) {
+        message.channel.send(`Discord clan must be in an alliance to be part of synchronization channels`);
         return;
     }
     
-    const syncGroup = syncGroups[0];
-    const data = {'syncGroup': syncGroup, 'channel': message.channel};
+    // Attempt to retrieve the specified channel synchronization group
+    const name = args[0];
+    const syncChannelGroup = await SyncChannelGroup.get({name: name, allianceId: alliance.id, unique: true});
+    
+    if (syncChannelGroup == null) {
+        message.channel.send(`Could not find channel synchronization group: ${name}`);
+        return;
+    }
+    
+    // Create the synchronization channel object
+    const syncChannel = new SyncChannel({
+        id: message.channel.id,
+        guildId: message.guild.id,
+        channelGroupId: syncChannelGroup.id,
+        allianceId: alliance.id,
+        channel: message.channel
+    });
     
     try {
-        const syncChannel = await SyncChannel.create(data);
-        message.channel.send(`Channel linked to synchronization group '${syncGroup.name}'`);
+        await syncChannel.create();
+        message.channel.send(`Channel linked to synchronization group: ${syncChannelGroup.name}`);
         
         client.logger.debug('Sync Channel:');
         client.logger.dump(syncChannel);
@@ -60,10 +75,7 @@ const run = async (message, args, level) => {
             message.channel.send(error.message);
             return;
         } else {
-            const details = `Error linking channel to synchronization group '${syncGroup.name}'`;
-            message.channel.send(details);
-            client.logger.error(details);
-            client.logger.dump(error);
+            client.replyWithErrorAndDM(`Linking channel to synchronization group failed: ${syncChannelGroup.name}`, message, error);
         }
     }
 };

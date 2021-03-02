@@ -15,9 +15,9 @@ const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unus
 class SyncMessage extends BaseModel {
     static tableName = 'message';
     static orderBy   = 'created_at';
-    static fields    = [ 'channel', 'guild_id'
+    static fields    = [ 'id', 'channel_id', 'guild_id'
                        , 'orig_message_id', 'orig_channel_id', 'orig_guild_id'
-                       , 'is_clone', 'content', 'author_id' ];
+                       , 'channel_group_id', 'alliance_id', 'is_clone', 'content', 'author_id' ];
     static fieldMap  = BaseModel.getFieldMap(SyncMessage.fields);
     
     constructor(data) {
@@ -54,6 +54,10 @@ class SyncMessage extends BaseModel {
     
     get channelGroupId() {
         return this.data.channel_group_id;
+    }
+    
+    get allianceId() {
+        return this.data.alliance_id;
     }
     
     get isClone() {
@@ -100,6 +104,10 @@ class SyncMessage extends BaseModel {
         this.data.channel_group_id = value;
     }
     
+    set allianceId(value) {
+        this.data.alliance_id = value;
+    }
+    
     set isClone(value) {
         this.data.is_clone = value;
     }
@@ -117,93 +125,121 @@ class SyncMessage extends BaseModel {
     // ***************** //
     
     static async sync(message) {
-        const linkedSyncChannelData = await SyncChannel.getLinkedSyncChannelData(message.channel.id);
+        const syncChannel = await SyncChannel.get({id: message.channel.id, unique: true});
         
         // Tap out if  this message is not from a channel being synced
-        if (linkedSyncChannelData == null) {
+        if (syncChannel == null) {
             return;
         }
         
-        // Reassign to immediate local variables for convenience 
-        const syncChannel       = linkedSyncChannelData.syncChannel;
-        const cloneSyncChannels = linkedSyncChannelData.cloneSyncChannels;
+        // Get the synchronization channels to which we need to sync this message
+        const linkedSyncChannels = await SyncChannel.get({
+            id: message.channel.id,
+            channelGroupId: syncChannel.channelGroupId,
+            getLinkedChannels: true
+        });
         
-        // Create the sync message for the original message
-        const syncMessage = await SyncMessage.create({'message': message, 'syncChannel': syncChannel});
-        client.logger.debug('Original SyncMessage:');
-        client.logger.dump(syncMessage);
+        try {
+            // Create the sync message for the original message
+            const syncMessage = new SyncMessage({
+                id             : message.id,
+                channelId      : message.channel.id,
+                guildId        : message.guild.id,
+                channelGroupId : syncChannel.channelGroupId,
+                allianceId     : syncChannel.allianceId,
+                content        : message.content,
+                authorId       : message.author.id
+            });
+            await syncMessage.create();
+            
+            // Share the message with the log, but make this conditional later
+            client.logger.debug('Message to be Synchronized');
+            client.logger.dump(syncMessage);
+            
+            for (let x = 0; x < linkedSyncChannels.length; x++) {
+                const linkedSyncChannel = linkedSyncChannels[x];
+                const result = await linkedSyncChannel.sendWebhookMessage(message);
+                
+                const data = {
+                    id             : result.data.id,
+                    channelId      : linkedSyncChannel.id,
+                    guildId        : linkedSyncChannel.guildId,
+                    origMessageId  : message.id,
+                    origChannelId  : message.channel.id,
+                    origGuildId    : message.guild.id,
+                    channelGroupId : linkedSyncChannel.channelGroupId,
+                    allianceId     : syncChannel.allianceId,
+                    isClone        : true,
+                    authorId       : message.author.id
+                };
+                
+                const clonedSyncMessage = new SyncMessage(data);
+                clonedSyncMessage.create();
+                
+                client.logger.debug(`Message Cloned - Sync Channel [${x+1}]`);
+                client.logger.dump(clonedSyncMessage);
+            }
         
-        for (let x = 0; x < cloneSyncChannels.length; x++) {
-            const cloneSyncMessage = await SyncMessage.create({'message': message, 'syncChannel': cloneSyncChannels[x]});
-            client.logger.debug('Clone SyncMessage:');
-            client.logger.dump(cloneSyncMessage);
+        } catch (error) {
+            if (error instanceof DuplicateError) {
+                message.channel.send(error.message);
+                return;
+            } else {
+                client.replyWithErrorAndDM(`Synchronization of message ran into an error: ${message.id}`, message, error);
+            }
         }
+        
     }
     
     static async syncUpdate(oldMessage, newMessage){
-        const cloneSyncMessages = await SyncMessage.get({orig_message_id: newMessage.id});
+        const syncMessage        = await SyncMessage.get({id: newMessage.id, unique: true});
+        const clonedSyncMessages = await SyncMessage.get({origMessageId: newMessage.id});
         
-        for (let x = 0; x < cloneSyncMessages.length; x++) {
-            const cloneSyncChannels = await SyncChannel.get({channel_id: cloneSyncMessages[x].channel_id});
-            cloneSyncChannels[0].editWebhookMessage(cloneSyncMessages[x].message_id, newMessage);
+        // Update the original message in the database
+        syncMessage.content = newMessage.content;
+        syncMessage.update();
+        
+        // Update the cloned messages
+        for (let x = 0; x < clonedSyncMessages.length; x++) {
+            const clonedSyncMessage = clonedSyncMessages[x];
+            const clonedSyncChannel = await SyncChannel.get({id: clonedSyncMessage.channelId, unique: true});
+            
+            clonedSyncChannel.editWebhookMessage(clonedSyncMessage.id, newMessage);
        }
     }
     
     static async syncDelete(message) {
-        const cloneSyncMessages = await SyncMessage.get({orig_message_id: message.id});
+        const syncMessage        = await SyncMessage.get({id: message.id, unique: true});
+        const clonedSyncMessages = await SyncMessage.get({origMessageId: message.id});
         
-        for (let x = 0; x < cloneSyncMessages.length; x++) {
-            const cloneSyncChannels = await SyncChannel.get({channel_id: cloneSyncMessages[x].channel_id});
-            cloneSyncChannels[0].deleteWebhookMessage(cloneSyncMessages[x].message_id);
+        // Delete the cloned messages
+        for (let x = 0; x < clonedSyncMessages.length; x++) {
+            const clonedSyncMessage = clonedSyncMessages[x];
+            const clonedSyncChannel = await SyncChannel.get({id: clonedSyncMessage.channelId, unique: true});
+            
+            clonedSyncChannel.deleteWebhookMessage(clonedSyncMessage.id);
+            clonedSyncMessage.delete();
        }
+       
+       // Delete the original sync message
+       syncMessage.delete();
     }
     
     // ******************** //
     // * Instance Methods * //
     // ******************** //
     
-    static async create(data) {
+    async create() {
         // Make sure this message has not already been synchronized
-        const syncMessages = await SyncMessage.get({
-            id: this.messageId,
-            channelId: this.channelId
+        const syncMessage = await SyncMessage.get({
+            id: this.id,
+            channelId: this.channelId,
+            unique: true
         });
         
-        if (syncMessages.length > 0) {
+        if (syncMessage != null) {
             throw new DuplicateError(`This message has already been synchronized`);
         }
-        
-        //let syncMessageData;
-        //
-        //if (message.channel.id == syncChannel.channel_id) {
-        //    syncMessageData = {
-        //        'message_id'    : message.id,
-        //        'channel_id'    : message.channel.id,
-        //        'guild_id'      : message.guild.id,
-        //        'sync_group_id' : syncChannel.sync_group_id,
-        //        'content'       : message.content
-        //    };
-        //    
-        //} else {
-        //    const result = await syncChannel.sendWebhookMessage(message);
-        //    syncMessageData = {
-        //        'message_id'      : result.data.id,
-        //        'channel_id'      : syncChannel.channel_id,
-        //        'guild_id'        : syncChannel.guild_id,
-        //        'sync_group_id'   : syncChannel.sync_group_id,
-        //        'is_clone'        : true,
-        //        'orig_message_id' : message.id,
-        //        'orig_channel_id' : message.channel.id,
-        //        'orig_guild_id'   : message.guild.id
-        //    };
-        //}
-        //
-        //client.logger.debug('syncMessageData');
-        //client.logger.dump(syncMessageData);
-        //
-        //const result = await this._create(syncMessageData); // eslint-disable-line no-unused-vars
-        //const syncMessage = new SyncMessage(syncMessageData);
-        //return syncMessage;
         
         // And attempt to create it
         await BaseModel.prototype.create.call(this);

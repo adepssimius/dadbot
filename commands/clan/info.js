@@ -37,7 +37,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     let guild;
     
     if (args.length == 0) {
-        const guilds = await Guild.get({guild_id: message.guild.id});
+        const guilds = await Guild.get({guildId: message.guild.id});
         
         if (guilds.length == 0) {
             message.channel.send(`This discord clan is not currently part of an alliance`);

@@ -34,7 +34,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     }
     
     // Get the alliance for this guild
-    const alliance = Alliance.get({guildId: message.guild.id, unique: true});
+    const alliance = await Alliance.get({guildId: message.guild.id, unique: true});
     if (alliance == null) {
         message.channel.send(`Discord clan must be in an alliance to be part of any channel synchronization groups`);
         return;
@@ -52,7 +52,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     for (let x = 0; x < syncChannelGroups.length; x++) {
         const syncChannelGroup = syncChannelGroups[x];
         const syncChannels = await SyncChannel.get({'channelGroupId': syncChannelGroup.id});
-        syncChannelGroupNames = `${syncChannelGroup.name} (${syncChannels.length} channel${syncChannels.length != 1 ? 's' : ''})`;
+        syncChannelGroupNames.push(`${syncChannelGroup.name} (${syncChannels.length} channel${syncChannels.length != 1 ? 's' : ''})`);
     }
     
     if (syncChannelGroups.length > 0) {

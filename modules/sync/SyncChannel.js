@@ -17,11 +17,19 @@ const http_delete = require(`${ROOT}/modules/Functions`).http_delete;
 class SyncChannel extends BaseModel {
     static tableName = 'channel';
     static orderBy   = 'created_at';
-    static fields    = ['id', 'guild_id', 'channel_group_id', 'webhook_id', 'webhook_url'];
+    static fields    = ['id', 'guild_id', 'channel_group_id', 'alliance_id', 'webhook_id', 'webhook_url'];
     static fieldMap  = BaseModel.getFieldMap(SyncChannel.fields);
     
     constructor(data) {
+        let channel;
+        
+        if (data.channel) {
+            channel = data.channel;
+            delete data.channel;
+        }
+        
         super(SyncChannel, data);
+        this.channel = channel;
 	}
 	
 	temp = {};
@@ -40,6 +48,10 @@ class SyncChannel extends BaseModel {
     
     get channelGroupId() {
         return this.data.channel_group_id;
+    }
+    
+    get allianceId() {
+        return this.data.alliance_id;
     }
     
     get webhookId() {
@@ -66,6 +78,10 @@ class SyncChannel extends BaseModel {
         this.data.channel_group_id = value;
     }
     
+    set allianceId(value) {
+        this.data.alliance_id = value;
+    }
+    
     set webhookId(value) {
         this.data.webhook_id = value;
     }
@@ -82,29 +98,14 @@ class SyncChannel extends BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    static async getLinkedSyncChannelData(channel_id) {
-        // Get the sync channel for the original message
-        let syncChannels = await SyncChannel.get({'channel_id': channel_id});
-        
-        // Quit immediately if this message is not from a channel being synced
-        if (syncChannels.length == 0) {
-            return;
-        } else if (syncChannels.length > 1) {
-            throw new Error('Too many records found for the same channel id, something is wrong!');
+    static parseConditions(conditions) {
+        if (conditions.getLinkedChannels) {
+            return (query) => {
+                query.where('channel_group_id', conditions.channelGroupId).whereNot('id', conditions.id);
+            };
         }
         
-        const linkedSyncChannels = await SyncChannel.get({sync_group_id: syncChannels[0].sync_group_id});
-        const cloneSyncChannels = [];
-        
-        for (let x = 0; x < linkedSyncChannels.length; x++) {
-            const linkedSyncChannel = linkedSyncChannels[x];
-            
-            if (linkedSyncChannel.channel_id != channel_id) {
-                cloneSyncChannels.push(linkedSyncChannel);
-            }
-        }
-        
-        return {syncChannel: syncChannels[0], cloneSyncChannels: cloneSyncChannels};
+        return conditions;
     }
     
     // ******************** //
@@ -113,23 +114,25 @@ class SyncChannel extends BaseModel {
     
     async create() {
         // Check to see if this channel is already in a synchronization group
-        const syncChannels = await SyncChannel.get({id: this.id});
-        if (syncChannels.length > 0) {
-            throw new DuplicateError(`This channel is already linked to a channel synchronization group`);
+        const syncChannel = await SyncChannel.get({id: this.id, unique: true});
+        if (syncChannel != null) {
+            throw new DuplicateError(`Channel already linked to channel synchronization group: ${syncChannel.name}`);
         }
         
         // Set webhook details
-        let webhook;
-        let webhookName = await this.getWebhookName();
+        //let webhook;
+        const webhookName = await this.getWebhookName();
         
         // Check if we already have a webhook for this channel
-        let webhooks = await this.channel.fetchWebhooks();
-        for (const nextWebhook of webhooks.values()) {
-            if (nextWebhook.name == webhookName) {
-                webhook = nextWebhook;
-                break;
-            }
-        }
+        const webhooks = await this.channel.fetchWebhooks();
+        let webhook = await webhooks.find(webhook => webhook.name == webhookName);
+        
+        //for (const nextWebhook of webhooks.values()) {
+        //    if (nextWebhook.name == webhookName) {
+        //        webhook = nextWebhook;
+        //        break;
+        //    }
+        //}
         
         // If we do not, then attempt to create one
         if (webhook == null) {
@@ -145,7 +148,7 @@ class SyncChannel extends BaseModel {
     }
     
     async delete() {
-        const webhook = await client.fetchWebhook(this.webhook_id);
+        const webhook = await client.fetchWebhook(this.webhookId);
         
         if (webhook != null) {
             await webhook.delete();
@@ -160,26 +163,25 @@ class SyncChannel extends BaseModel {
         }
         
         const SyncChannelGroup  = require(`${ROOT}/modules/sync/SyncChannelGroup`);
-        const syncChannelGroups = await SyncChannelGroup.get({id: this.channelGroupId});
-        const syncChannelGroup  = syncChannelGroups[0];
+        const syncChannelGroup = await SyncChannelGroup.get({id: this.channelGroupId, unique: true});
         
-        return `Ninkasi Bot - Sync Group [${syncChannelGroup.name}]`;
+        return `Ninkasi - Channel Sync Group [${syncChannelGroup.name}]`;
     }
     
     getDiscordChannel() {
-        return client.channels.fetch(this.channel_id);
+        return client.channels.fetch(this.id);
     }
     
     getWebhookExecuteURL(messageID) {
-        return this.webhook_url + '?wait=true';
+        return this.webhookUrl + '?wait=true';
     }
     
     getWebhookMessageEditURL(messageID) {
-        return this.webhook_url + '/messages/' + messageID;
+        return this.webhookUrl + '/messages/' + messageID;
     }
     
     getWebhookMessageDeleteURL(messageID) {
-        return this.webhook_url + '/messages/' + messageID;
+        return this.webhookUrl + '/messages/' + messageID;
     }
     
     async sendWebhookMessage(message) {

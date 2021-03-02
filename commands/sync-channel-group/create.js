@@ -34,7 +34,7 @@ const run = async (message, args, level) => {
     }
     
     // Get the alliance for this guild
-    const alliance = Alliance.get({guildId: message.guild.id, unique: true});
+    const alliance = await Alliance.get({guildId: message.guild.id, unique: true});
     if (alliance == null) {
         message.channel.send(`Discord clan must be in an alliance to create a channel synchronization group`);
         return;

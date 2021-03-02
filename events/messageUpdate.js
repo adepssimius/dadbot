@@ -3,7 +3,7 @@
 const ROOT = '..';
 
 // Load our classes
-//const SyncMessage = require(`${ROOT}/modules/sync/SyncMessage`);
+const SyncMessage = require(`${ROOT}/modules/sync/SyncMessage`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -13,9 +13,9 @@ const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unus
 // 
 
 module.exports = async (oldMessage, newMessage) => {
-    // Ignore messages from the bot
+    // Ignore updates from the bot
     if (newMessage.author.bot) return;
     
     // Attempt to update the message
-    //SyncMessage.syncUpdate(oldMessage, newMessage);
+    SyncMessage.syncUpdate(oldMessage, newMessage);
 };
