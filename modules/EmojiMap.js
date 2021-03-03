@@ -41,6 +41,18 @@ EmojiMap.map.set(7, '7️⃣');
 EmojiMap.map.set(8, '8️⃣');
 EmojiMap.map.set(9, '9️⃣');
 
+// Add numbers with their literal number as a string
+EmojiMap.map.set('0', '0️⃣');
+EmojiMap.map.set('1', '1️⃣');
+EmojiMap.map.set('2', '2️⃣');
+EmojiMap.map.set('3', '3️⃣');
+EmojiMap.map.set('4', '4️⃣');
+EmojiMap.map.set('5', '5️⃣');
+EmojiMap.map.set('6', '6️⃣');
+EmojiMap.map.set('7', '7️⃣');
+EmojiMap.map.set('8', '8️⃣');
+EmojiMap.map.set('9', '9️⃣');
+
 // Add letters with their emoji name
 EmojiMap.map.set(':regional_indicator_a:', '🇦');
 EmojiMap.map.set(':regional_indicator_b:', '🇧');

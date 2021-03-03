@@ -34,7 +34,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     }
     
     const alias = args.pop();
-    const activitySearchString = args.join(' ').replace(/^"(.+)"$/g, "$1").replace(/^'(.+)'$/g, "$1");
+    const activitySearchString = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
     
     // Find the given activity
     let activity = await Activity.get({

@@ -35,84 +35,122 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         return;
     }
     
-    const value = args.join(' ');
-    const activities = await Activity.getByNameOrAlias({activity_name: value, alias: value});
+    // Let's put things in context
+    const context = {create: false};
     
-    if (activities.length == 0) {
-        message.channel.send(`Could not find activity: '${value}'`);
+    const value = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
+    context.activity = await Activity.get({nameOrAlias: true, name: value, alias: value, unique: true});
+    
+    if (!context.activity) {
+        message.channel.send(`Could not find activity: ${value}`);
         return;
     }
-    
-    const activity = activities[0];
-    
-    // Let's put things in context
-    const context = {
-        create: false,
-        activity: activity
-    };
     
     // Get our property array
     context.properties = Activity.getEditableProperties(context);
     
-    async function loop() {
+    async function attributeSelectLoop() {
         const emojiMap = new Map();
         let options = '';
         
+        // Prepare the activity attribute editing emoji map
         for (let x = 0; x < context.properties.length; x++) {
             const property = context.properties[x];
             const emoji = EmojiMap.get(x+1);
             emojiMap.set(emoji, property);
             options += `${emoji} - ${property.name}\n`;
         }
-        emojiMap.set(EmojiMap.get(':x:'), {name: 'Stop'});
+        emojiMap.set(EmojiMap.get(':x:'), {name: 'stop'});
         
+        // Share the current state of the activity
+        message.channel.send(await context.activity.toMessageContent());
+        
+        // Prompt for an attribute to edit
         await message.channel.send('What would you like to change?');
-        const embed = new Discord.MessageEmbed().addFields({name: 'Attribute Selection', value: options.trim()});
+        const embed = new Discord.MessageEmbed().addFields({name: 'Select an attribute to edit', value: options.trim()});
         const replyMessage = await message.channel.send(embed);
         
         for (let emoji of emojiMap.keys()) {
             replyMessage.react(emoji);
         }
         
-        //
-        // FIXME - For some reason it does not update until after you type something or something
-        //
+        // Create the attribute select message and reaction collectors
+        context.attributeSelectMessageCollector = message.channel.createMessageCollector(nextMessage => {
+            return nextMessage.author.id == message.author.id;
+        });
         
-        const reactionCollector = replyMessage.createReactionCollector(async (reaction, user) => {
+        context.attributeSelectReactionCollector = replyMessage.createReactionCollector(async (reaction, user) => {
             return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
         });
         
-        reactionCollector.on('collect', async (reaction, user) => {
-            const property = emojiMap.get(reaction.emoji.name);
+        // Hook onto the collect event for the attribute select message and reaction collector
+        context.attributeSelectMessageCollector.on('collect', async function(nextMessage) {
+            // Grab the selected property
+            let emoji;
             
-            // See if it is time to stop
-            if (property.name == 'Stop') {
-                message.channel.send('Exiting edit loop');
+            if (nextMessage.content.toLowerCase() == 'x') {
+                emoji = EmojiMap.get(':x:');
+            } else {
+                emoji = EmojiMap.get(nextMessage.content);
+            }
+            
+            // See if we can find the property for this emoji
+            context.property = emojiMap.get(emoji);
+            
+            // Stop both collectors
+            context.attributeSelectReactionCollector.stop();
+            context.attributeSelectMessageCollector.stop();
+        });
+        
+        context.attributeSelectReactionCollector.on('collect', async (reaction, user) => {
+            // Grab the selected property
+            context.property = emojiMap.get(reaction.emoji.name);
+            
+            // Stop both collectors
+            context.attributeSelectReactionCollector.stop();
+            context.attributeSelectMessageCollector.stop();
+        });
+        
+        // Hook onto the end event for the attribute select message collector
+        // We do not also need to hook onto the reaction collector as we will stop them at the same time
+        
+        context.attributeSelectMessageCollector.on('end', async function(collected) {
+            // Check if the selection was invalid
+            if (!context.property) {
+                message.channel.send(`Invalid selection, please try again`);
+                context.attributeSelectMessageCollector.stop();
+                attributeSelectLoop();
                 return;
             }
             
-            // Otherwise prompt and collect more stuff
-            await property.prompt(message);
-            
-            const messageCollector = message.channel.createMessageCollector(nextMessage => {
-                return nextMessage.author.id == message.author.id;
-            });
-            
-            messageCollector.on('collect', async function(nextMessage) {
-                // Do not collect any more messages
-                messageCollector.stop();
+            // If this is a collectable attribute then setup a message collector and then prompt
+            if (context.property.name != 'stop') {
+                context.activityEditorMessageCollector = message.channel.createMessageCollector(nextMessage => {
+                    return nextMessage.author.id == message.author.id;
+                });
                 
-                // Process this one
-                await property.collect(message, nextMessage);
-                await activity.update();
-                message.channel.send('Activity updated');
+                context.activityEditorMessageCollector.on('collect', async function(nextMessage) {
+                    context.activityEditorMessageCollector.stop();
+                    await context.property.collect(message, nextMessage);
+                });
                 
-                // And do it again!
-                loop();
-            });
+                context.activityEditorMessageCollector.on('end', async function(collected) {
+                    attributeSelectLoop();
+                });
+                
+                // Prompt for collection of property data
+                await context.property.prompt(message);
+            }
+            
+            if (context.property.name == 'stop') {
+                // TODO - Add in check to see if anything was changed
+                await context.activity.update();
+                message.channel.send(`Activity updated: ${context.activity.name}`);
+                return;
+            }
         });
     }
     
-    loop();
+    attributeSelectLoop();
 };
 exports.run = run;

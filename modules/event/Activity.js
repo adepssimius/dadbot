@@ -161,6 +161,41 @@ class Activity extends BaseModel {
         return await ActivityAlias.get({activityId: this.id});
     }
     
+    async getActivityAliasStrings() {
+        const activityAliases = await this.getActivityAliases();
+        
+        const aliases = [];
+        for (let x = 0; x < activityAliases.length; x++) {
+            aliases.push(activityAliases[x].alias);
+        }
+        
+        return aliases;
+    }
+    
+    async toMessageContent() {
+        const activityCategory = await this.getActivityCategory();
+        const activityAliases  = await this.getActivityAliases();
+        
+        //
+        // TODO - Make this prettier
+        //
+        
+        const aliases = await this.getActivityAliasStrings();
+        const aliasList = ( activityAliases.length > 0 ? aliases.join(', ') : 'No aliases for this activity' );
+        
+        const embed = new Discord.MessageEmbed()
+            .setTitle('Activity')
+            .addFields(
+                { name: 'Name', value: this.name },
+                { name: 'Aliases', value: aliasList },
+                { name: 'Category', value: `${activityCategory.title}` },
+                { name: 'Maximum Fireteam Size', value: this.fireteamSize },
+                { name: 'Estimated Maximum Duration', value: `${this.estMaxDuration} minutes` }
+            );
+        
+        return embed;
+    }
+    
     // ***************************************** //
     // * Properties Array for User Interaction * //
     // ***************************************** //
@@ -212,23 +247,22 @@ class Activity extends BaseModel {
                     replyMessage.react(emoji);
                 }
                 
-                context.reactionCollector = replyMessage.createReactionCollector(async (reaction, user) => {
+                context.categorySelectReactionCollector = replyMessage.createReactionCollector(async (reaction, user) => {
                     return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
                 });
                 
-                context.reactionCollector.on('collect', async (reaction, user) => {
+                context.categorySelectReactionCollector.on('collect', async (reaction, user) => {
                     const activityCategory = emojiMap.get(reaction.emoji.name);
-                    if (activityCategory != null) {
-                        await context.reactionCollector.stop();
-                        context.reactionCollector = null;
-                        
+                    
+                    if (activityCategory) {
+                        await context.categorySelectReactionCollector.stop();
                         context.activity.activityCategoryId = activityCategory.id;
                         
                         if (context.create) {
                             properties.shift();
-                            
-                            // Since we are in a reaction collector, we need to do this manually
                             await properties[0].prompt(message, nextMessage);
+                        } else {
+                            context.activityEditorMessageCollector.stop();
                         }
                     }
                 });
@@ -245,14 +279,15 @@ class Activity extends BaseModel {
                 
                 if (!activityCategory) {
                     await message.channel.send(`Activity category not found: ${nextMessage.content}`);
-                } else {
-                    context.reactionCollector.stop();
-                    context.reactionCollector = null;
-                    
-                    context.activity.activityCategoryId = activityCategory.id;
-                    
-                    if (context.create) properties.shift();
+                    return;
                 }
+                
+                context.categorySelectReactionCollector.stop();
+                delete context.categorySelectReactionCollector;
+                
+                context.activity.activityCategoryId = activityCategory.id;
+                
+                if (context.create) properties.shift();
             }
         });
         
@@ -278,29 +313,33 @@ class Activity extends BaseModel {
                     return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
                 };
                 
-                const reactionCollector = await replyMessage.createReactionCollector(emojiFilter);
-                context.reactionCollector = reactionCollector;
+                context.fireteamSizeReactionCollector = await replyMessage.createReactionCollector(emojiFilter);
                 
-                reactionCollector.on('collect', async (reaction, user) => {
+                context.fireteamSizeReactionCollector.on('collect', async (reaction, user) => {
                     const fireteamSize = emojiMap.get(reaction.emoji.name);
-                    if (fireteamSize != null) {
-                        context.reactionCollector.stop();
-                        context.reactionCollector = null;
-                        
-                        context.activity.fireteamSize = fireteamSize;
-                        if (context.create) {
-                            properties.shift();
-                            
-                            // Since we are in a reaction collector, we need to do this manually
-                            properties[0].prompt(message, nextMessage);
-                        }
+                    if (!fireteamSize) {
+                        message.channel.send(`Invalid reaction`);
+                        return;
+                    }
+                    
+                    // Stop collecting fireteam size reactions
+                    context.fireteamSizeReactionCollector.stop();
+                    
+                    // Set the value and move on
+                    context.activity.fireteamSize = fireteamSize;
+                    
+                    if (context.create) {
+                        properties.shift();
+                        properties[0].prompt(message, nextMessage);
+                    } else {
+                        context.activityEditorMessageCollector.stop();
                     }
                 });
             },
             
             collect: async (message, nextMessage) => {
-                context.reactionCollector.stop();
-                context.reactionCollector = null;
+                context.fireteamSizeReactionCollector.stop();
+                delete context.fireteamSizeReactionCollector;
                 
                 context.activity.fireteamSize = nextMessage.content;
                 if (context.create) properties.shift();

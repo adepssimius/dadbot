@@ -24,7 +24,7 @@ const help = {
     name: 'info',
     category: 'Activity Administration',
     description: 'Show the details about an activity',
-    usage: 'activity info <name|abbreviation>'
+    usage: 'activity info <name|alias>'
 };
 exports.help = help;
 
@@ -46,28 +46,6 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         return;
     }
     
-    const activityCategory = await activity.getActivityCategory();
-    const activityAliases  = await activity.getActivityAliases();
-    
-    //
-    // TODO - Make this prettier
-    //
-    
-    const aliases = [];
-    for (let x = 0; x < activityAliases.length; x++) {
-        aliases.push(activityAliases[x].alias);
-    }
-    const aliasList = ( activityAliases.length > 0 ? aliases.join(', ') : 'No aliases for this activity' );
-    
-    const embed = new Discord.MessageEmbed()
-        .setTitle('Activity')
-        .addFields(
-            { name: 'Name', value: activity.name },
-            { name: 'Aliases', value: aliasList },
-            { name: 'Category', value: `${activityCategory.title}` },
-            { name: 'Maximum Fireteam Size', value: activity.fireteamSize },
-            { name: 'Estimated Maximum Duration', value: `${activity.estMaxDuration} minutes` }
-        );
-    message.channel.send(embed);
+    message.channel.send(await activity.toMessageContent());
 };
 exports.run = run;
