@@ -34,7 +34,7 @@ const run = async (message, args, level) => {
     
     const value = args.join(' ').replace(/^"(.+)"$/g, "$1").replace(/^'(.+)'$/g, "$1");
     
-    const alliances = await Alliance.get({nameOrShortName: {name: value, shortName: value}});
+    const alliances = await Alliance.get({nameOrShortName: true, name: value, shortName: value});
     if (alliances.length == 0) {
         message.channel.send(`Cannot find an alliance with that name or alias`);
         return;

@@ -10,43 +10,27 @@ const Snowflake       = require(`${ROOT}/modules/Snowflake`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
-const knex   = require(`${ROOT}/modules/Database`);
 
 class ActivityCategory extends BaseModel {
     static tableName = 'activity_category';
-    static orderBy   = 'category_name';
+    static orderBy   = 'name';
+    static fields    = ['id', 'name', 'symbol', 'alliance_id', 'creator_id'];
+    static fieldMap  = BaseModel.getFieldMap(ActivityCategory.fields);
     
     constructor(data) {
-        if (data.categoryId == null) data.categoryId = Snowflake.generate();
-        super(data);
-        
-        // Populate custom fields with the same database and object name
-        if (data.symbol != null) this.symbol = data.symbol;
-        
-        // Populate custom fields with different database and object names
-        if      (data.category_id != null) this.categoryId = data.category_id;
-        else if (data.categoryId  != null) this.categoryId = data.categoryId;
-        
-        if      (data.category_name != null) this.categoryName = data.category_name;
-        else if (data.categoryName  != null) this.categoryName = data.categoryName;
-        
-        if      (data.alliance_id != null) this.allianceId  = data.alliance_id;
-        else if (data.allianceId  != null) this.allianceId  = data.allianceId;
-        
-        if      (data.creator_id != null) this.creatorId  = data.creator_id;
-        else if (data.creatorId  != null) this.creatorId  = data.creatorId;
+        super(ActivityCategory, data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
     
-    get categoryId() {
-        return this.data.category_id;
+    get tableName() {
+        return ActivityCategory.tableName;
     }
     
-    get categoryName() {
-        return this.data.category_name;
+    get name() {
+        return this.data.name;
     }
     
     get symbol() {
@@ -61,16 +45,16 @@ class ActivityCategory extends BaseModel {
         return this.data.creator_id;
     }
     
+    get title() {
+        return `${this.name} [${this.symbol}]`;
+    }
+    
     // *********** //
     // * Setters * //
     // *********** //
     
-    set categoryId(value) {
-        this.data.category_id = value;
-    }
-    
-    set categoryName(value) {
-        this.data.category_name = value;
+    set name(value) {
+        this.data.name = value;
     }
     
     set symbol(value) {
@@ -89,30 +73,23 @@ class ActivityCategory extends BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    // Standard get and create functions
-    
-    static async get(whereClause) {
-        // Always search symbol in upper case
-        if (whereClause != null && whereClause.symbol != null) {
-            whereClause.symbol = whereClause.symbol.toUpperCase();
+    static parseConditions(conditions) {
+        // Check by name or symbol
+        if (conditions.nameOrSymbol) {
+            return (query) => {
+                query.where('name', conditions.name)
+                    .orWhere('symbol', conditions.symbol.toUpperCase());
+            };
         }
         
-        let result = [];
-        let rows = await this._get(whereClause);
+        // Handle any special fields
+        let parsedConditions = conditions;
         
-        for (let x = 0; x < rows.length; x++) {
-            result.push(new ActivityCategory(rows[x]));
+        if (parsedConditions.symbol) {
+            parsedConditions.symbol = parsedConditions.symbol.toUpperCase();
         }
         
-        return result;
-    }
-    
-    // Extra functions for this class
-    
-    static async getByNameOrSymbol(data) {
-        return await ActivityCategory.get( (query) =>
-            query.where('category_name', data.categoryName).orWhere('symbol', data.symbol.toUpperCase())
-        );
+        return parsedConditions;
     }
     
     // ******************** //
@@ -120,45 +97,34 @@ class ActivityCategory extends BaseModel {
     // ******************** //
     
     async create() {
-        const BaseModel = require(`${ROOT}/modules/BaseModel`);
-        
-        const activityCategories = await ActivityCategory.getByNameOrSymbol({
-            categoryName: this.categoryName,
+        const activityCategory = await ActivityCategory.get({
+            nameOrSymbol: true,
+            name: this.name,
             symbol: this.symbol
-        });
+        }, true);
         
-        if (activityCategories.length > 0) {
-            throw new DuplicateError(`Existing category found with the same name or symbol: ${this.categoryName} [${this.symbol}]`);
+        // Check if this is a duplicate activity category
+        if (activityCategory) {
+            throw new DuplicateError(`Existing category found with the same name or symbol: ${this.title}`);
         }
         
-        await BaseModel.create.call(this, ActivityCategory.tableName, this.data);
-    }
-    
-    async update() {
-        this.updatedAt = knex.fn.now();
+        // Create the ID for this activity category
+        this.id = Snowflake.generate();
         
-        let rowsChanged = await knex(ActivityCategory.tableName)
-            .where('category_id', this.categoryId)
-            .update(this.data)
-            .then(result => {
-                return result;
-            });
-        
-        if (rowsChanged == 0) {
-            throw new Error('Update did not change any records!');
-        } else if (rowsChanged > 1) {
-            throw new Error('Update changed more then one record!');
-        }
+        // And attempt to create it
+        await BaseModel.prototype.create.call(this);
     }
     
     async delete() {
         const Activity = require(`${ROOT}/modules/event/Activity`);
-        const activities = await Activity.get({category_id: this.categoryId});
+        const activities = await Activity.get({activityCategoryId: this.id});
         
         if (activities.length > 0) {
-            throw new ForeignKeyError('Cannot delete category while activities still exist');
+            throw new ForeignKeyError('Cowardly refusing to delete category while activities still exist');
         }
-        return await ActivityCategory._delete({category_id: this.categoryId});
+        
+        // And attempt to delete it
+        await BaseModel.prototype.delete.call(this);
     }
 }
 

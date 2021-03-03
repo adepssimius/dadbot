@@ -32,25 +32,25 @@ const run = async (message, args, level) => {
         return;
     }
     
-    const value = args.join(' ').replace(/^"(.+)"$/g, "$1").replace(/^'(.+)'$/g, "$1");
-    const activityCategories = await ActivityCategory.getByNameOrSymbol({
-        categoryName: value,
+    const value = args.join(' ').replace(/^"(.+)"$/g, '$1').replace(/^'(.+)'$/g, '$1');
+    let activityCategory = await ActivityCategory.get({
+        nameOrSymbol: true,
+        name: value,
         symbol: value
-    });
+    }, true);
     
-    if (activityCategories.length == 0) {
-        message.channel.send(`Cannot find activity category with that name or symbol`);
+    if (!activityCategory) {
+        message.channel.send(`Could not find activity category: '${value}'`);
         return;
     }
     
-    const activityCategory = activityCategories[0];
-    const activities = await Activity.get({category_id: activityCategory.categoryId});
+    const activities = await Activity.get({activityCategoryId: activityCategory.id});
     
     if (activities.length > 0) {
         const activityNames = [];
         for (let x = 0; x < activities.length; x++) {
             const activity = activities[x];
-            activityNames.push(activity.activityName);
+            activityNames.push(activity.name);
         }
         const activityNameList = activityNames.join('\n');
         
@@ -60,11 +60,10 @@ const run = async (message, args, level) => {
     
     try {
         await activityCategory.delete();
-        message.channel.send(`Activity category deleted`);
+        message.channel.send(`Activity category deleted: ${activityCategory.title}`);
     
     } catch (error) {
-        const label = `${activityCategory.categoryName} [${activityCategory.symbol}]`;
-        client.replyWithErrorAndDM(`Deletion of activity category failed: ${label}`, message, error);
+        client.replyWithErrorAndDM(`Deletion of activity category failed: ${activityCategory.title}`, message, error);
     }
 };
 exports.run = run;

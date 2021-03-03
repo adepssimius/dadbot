@@ -82,16 +82,17 @@ class Guild extends BaseModel {
     
     static parseConditions(conditions) {
         // Check for a clan name or clan short name search
-        if (conditions.clanNameOrShortName != null) {
+        if (conditions.clanNameOrShortName) {
             return (query) => {
-                query.where('clan_name', conditions.clanName).orWhere('clan_short_name', conditions.clanShortName.toUpperCase());
+                query.where('clan_name', conditions.clanName)
+                    .orWhere('clan_short_name', conditions.clanShortName.toUpperCase());
             };
         }
         
         // Handle any special fields
         const parsedConditions = conditions;
         
-        if (parsedConditions.clanShortName != null) {
+        if (parsedConditions.clanShortName) {
             parsedConditions.clanShortName = parsedConditions.clanShortName.toUpperCase();
         }
         

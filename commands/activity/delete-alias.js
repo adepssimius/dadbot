@@ -3,7 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const ActivityAlias  = require(`${ROOT}/modules/event/ActivityAlias`);
+const Activity      = require(`${ROOT}/modules/event/Activity`);
+const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -34,21 +35,22 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     const alias = args[0];
     
     // Get the activity alias
-    let activityAliases = await ActivityAlias.get({alias: alias});
+    let activityAlias = await ActivityAlias.get({alias: alias, unique: true});
     
-    if (activityAliases.length == 0) {
+    if (!activityAlias) {
         message.channel.send(`Could not find that alias for an activity: '${alias}'`);
         return;
     }
-    const activityAlias = activityAliases[0];
+    
+    // Get the activity
+    const activity = await Activity.get({alias: alias}, true);
     
     // Attempt to delete the alias
     try {
         await activityAlias.delete();
-        message.channel.send(`Activity alias deleted`);
-    
+        message.channel.send(`Activity alias deleted: ${activity.name} [${activityAlias.alias}]`);
     } catch (error) {
-        client.replyWithErrorAndDM(`Deletion of activity alias failed: ${activityAlias.alias}`, message, error);
+        client.replyWithErrorAndDM(`Deletion of activity alias failed: ${activity.name} [${activityAlias.alias}]`, message, error);
     }
 };
 exports.run = run;

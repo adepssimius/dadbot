@@ -40,6 +40,10 @@ class Alliance extends BaseModel {
         return this.data.creator_id;
     }
     
+    get title() {
+        return `${this.name} [${this.shortName}]`;
+    }
+    
     // *********** //
     // * Setters * //
     // *********** //
@@ -66,15 +70,15 @@ class Alliance extends BaseModel {
     
     static parseConditions(conditions) {
         // Check for a name or short name search
-        if (conditions.nameOrShortName != null) {
+        if (conditions.nameOrShortName) {
             return (query) => {
-                query.where('name', conditions.nameOrShortName.name)
-                    .orWhere('short_name', conditions.nameOrShortName.shortName.toUpperCase());
+                query.where('name', conditions.name)
+                    .orWhere('short_name', conditions.shortName.toUpperCase());
             };
         }
         
         // Check for a guild id search
-        if (conditions.guildId != null) {
+        if (conditions.guildId) {
             const Guild = require(`${ROOT}/modules/alliance/Guild`);
             return (query) => {
                 query.whereIn('id', function() {
@@ -86,7 +90,7 @@ class Alliance extends BaseModel {
         // Handle any special fields
         let parsedConditions = conditions;
         
-        if (parsedConditions.shortName != null) {
+        if (parsedConditions.shortName) {
             parsedConditions.shortName = parsedConditions.shortName.toUpperCase();
         }
         
@@ -98,16 +102,15 @@ class Alliance extends BaseModel {
     // ******************** //
     
     async create() {
-        const alliances = await Alliance.get({
-            'nameOrShortName': {
-                name: this.name,
-                shortName: this.shortName
-            }
-        });
+        const alliance = await Alliance.get({
+            nameOrShortName: true,
+            name: this.name,
+            shortName: this.shortName
+        }, true);
         
         // Check if this is a duplicate alliance
-        if (alliances.length > 0) {
-            throw new DuplicateError(`Existing alliance found with the same name or short name: ${this.name} [${this.shortName}]`);
+        if (alliance) {
+            throw new DuplicateError(`Existing alliance found with the same name or short name: ${this.title}`);
         }
         
         // Create the ID for this alliance
@@ -115,10 +118,6 @@ class Alliance extends BaseModel {
         
         // And attempt to create it
         await BaseModel.prototype.create.call(this);
-    }
-    
-    getTitle() {
-        return `${this.name} [${this.shortName}]`;
     }
 }
 

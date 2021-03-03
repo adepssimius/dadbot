@@ -42,10 +42,12 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     
     if (activityCategories.length > 0) {
         const categoryListElements = [];
+        
         for (let x = 0; x < activityCategories.length; x++) {
             const activityCategory = activityCategories[x];
-            categoryListElements.push(`[${activityCategory.symbol}] ${activityCategory.categoryName}`);
+            categoryListElements.push(`[${activityCategory.symbol}] ${activityCategory.name}`);
         }
+        
         response += '```' + categoryListElements.join('\n') + '```';
     }
     

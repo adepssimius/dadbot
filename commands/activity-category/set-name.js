@@ -34,22 +34,19 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     const symbol  = args.shift();
     const newName = args.join(' ');
     
-    let activityCategories = await ActivityCategory.get({symbol: symbol});
-    if (activityCategories.length == 0) {
+    let activityCategory = await ActivityCategory.get({symbol: symbol, unique: true});
+    if (!activityCategory) {
         message.channel.send(`Could not find activity category: '${symbol}'`);
         return;
     }
     
-    const activityCategory = activityCategories[0];
-    activityCategory.categoryName = newName;
+    activityCategory.name = newName;
     
     try {
         await activityCategory.update();
-        message.channel.send(`Activity category name updated`);
-    
+        message.channel.send(`Activity category name updated: ${activityCategory.title}`);
     } catch (error) {
-        const label = `${activityCategory.categoryName} [${activityCategory.symbol}]`;
-        client.replyWithErrorAndDM(`Update of activity category name failed: ${label}`, message, error);
+        client.replyWithErrorAndDM(`Update of activity category name failed: ${activityCategory.title}`, message, error);
     }
 };
 exports.run = run;

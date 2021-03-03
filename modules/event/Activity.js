@@ -6,7 +6,7 @@ const ROOT = '../..';
 const BaseModel        = require(`${ROOT}/modules/BaseModel`);
 const EmojiMap         = require(`${ROOT}/modules/EmojiMap`);
 const Snowflake        = require(`${ROOT}/modules/Snowflake`);
-const ActivityAlias    = require(`${ROOT}/modules/event/ActivityAlias`);
+//const ActivityAlias    = require(`${ROOT}/modules/event/ActivityAlias`);
 const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load external classes
@@ -14,53 +14,31 @@ const Discord = require('discord.js');
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
-const knex   = require(`${ROOT}/modules/Database`);
 
 class Activity extends BaseModel {
     static tableName = 'activity';
-    static orderBy   = 'activity_name';
+    static orderBy   = 'name';
+    static fields    = ['id', 'name', 'activity_category_id', 'fireteam_size', 'est_max_duration', 'alliance_id', 'creator_id'];
+    static fieldMap  = BaseModel.getFieldMap(Activity.fields);
     
     constructor(data) {
-        if (data.activityId == null) data.activityId = Snowflake.generate();
-        super(data);
-        
-        // Populate custom fields with different database and object names
-        if      (data.activity_id != null) this.activityId = data.activity_id;
-        else if (data.activityId  != null) this.activityId = data.activityId;
-        
-        if      (data.activity_name != null) this.activityName = data.activity_name;
-        else if (data.activityName  != null) this.activityName = data.activityName;
-        
-        if      (data.category_id != null) this.categoryId  = data.category_id;
-        else if (data.categoryId  != null) this.categoryId  = data.categoryId;
-        
-        if      (data.fireteam_size != null) this.fireteamSize  = data.fireteam_size;
-        else if (data.fireteamSize  != null) this.fireteamSize  = data.fireteamSize;
-        
-        if      (data.est_max_duration != null) this.estMaxDuration  = data.est_max_duration;
-        else if (data.estMaxDuration   != null) this.estMaxDuration  = data.estMaxDuration;
-        
-        if      (data.alliance_id != null) this.allianceId  = data.alliance_id;
-        else if (data.allianceId  != null) this.allianceId  = data.allianceId;
-        
-        if      (data.creator_id != null) this.creatorId  = data.creator_id;
-        else if (data.creatorId  != null) this.creatorId  = data.creatorId;
+        super(Activity, data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
     
-    get activityId() {
-        return this.data.activity_id;
+    get tableName() {
+        return Activity.tableName;
     }
     
-    get activityName() {
-        return this.data.activity_name;
+    get name() {
+        return this.data.name;
     }
     
-    get categoryId() {
-        return this.data.category_id;
+    get activityCategoryId() {
+        return this.data.activity_category_id;
     }
     
     get fireteamSize() {
@@ -79,20 +57,20 @@ class Activity extends BaseModel {
         return this.data.creator_id;
     }
     
+    get title() {
+        return `${this.name}`;
+    }
+    
     // *********** //
     // * Setters * //
     // *********** //
     
-    set activityId(value) {
-        this.data.activity_id = value;
+    set name(value) {
+        this.data.name = value;
     }
     
-    set activityName(value) {
-        this.data.activity_name = value;
-    }
-    
-    set categoryId(value) {
-        this.data.category_id = value;
+    set activityCategoryId(value) {
+        this.data.activity_category_id = value;
     }
     
     set fireteamSize(value) {
@@ -115,28 +93,27 @@ class Activity extends BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    // Standard get and create functions
-    
-    static async get(whereClause) {
-        let result = [];
-        let rows = await this._get(whereClause);
-        
-        for (let x = 0; x < rows.length; x++) {
-            result.push(new Activity(rows[x]));
+    static parseConditions(conditions) {
+        if (conditions.nameOrAlias) {
+            const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
+            return (query) => {
+                query.where('name', conditions.name)
+                    .orWhereIn('id', function() {
+                        this.select('activity_id').from(ActivityAlias.tableName).where('alias', conditions.alias.toUpperCase());
+                    });
+            };
         }
         
-        return result;
-    }
-    
-    // Extra functions for this class
-    
-    static async getByNameOrAlias(data) {
-        return await Activity.get( (query) =>
-            query.where('activity_name', data.activity_name)
-                .orWhereIn('activity_id', function() {
-                    this.select('activity_id').from(ActivityAlias.tableName).where('alias', data.alias);
-                })
-        );
+        if (conditions.alias) {
+            const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
+            return (query) => {
+                query.whereIn('id', function() {
+                    this.select('activity_id').from(ActivityAlias.tableName).where('alias', conditions.alias.toUpperCase());
+                });
+            };
+        }
+        
+        return conditions;
     }
     
     // ******************** //
@@ -144,60 +121,44 @@ class Activity extends BaseModel {
     // ******************** //
     
     async create() {
-        const BaseModel = require(`${ROOT}/modules/BaseModel`);
-        
-        const activities = await Activity.get({activity_name: this.activityName});
-        if (activities.length > 0) {
-            const activity = activities[0];
-            throw new DuplicateError(`Existing activity found with the same name: ${activity.activityName}`);
+        const activity = await Activity.get({name: this.name, unique: true});
+        if (activity) {
+            throw new DuplicateError(`Existing activity found with the same name: ${this.name}`);
         }
         
-        await BaseModel.create.call(this, Activity.tableName, this.data);
-    }
-    
-    async update() {
-        this.updatedAt = knex.fn.now();
+        // Create the ID for this activity category
+        this.id = Snowflake.generate();
         
-        let rowsChanged = await knex(Activity.tableName)
-            .where('activity_id', this.activity_id)
-            .update(this.data)
-            .then(result => {
-                return result;
-            });
-        
-        if (rowsChanged == 0) {
-            throw new Error('Update did not change any records!');
-        } else if (rowsChanged > 1) {
-            throw new Error('Update changed more then one record!');
-        }
+        // And attempt to create it
+        await BaseModel.prototype.create.call(this);
     }
     
     async delete() {
-        const activityAliases = ActivityAlias.get({activity_id: this.activityId});
+        const ActivityAlias   = require(`${ROOT}/modules/event/ActivityAlias`);
+        const activityAliases = ActivityAlias.get({id: this.id});
         
         for (let x = 0; x < activityAliases.length; x++) {
             await activityAliases[x].delete();
         }
         
-        return await Activity._delete({activity_id: this.activityId});
+        // And attempt to delete it
+        await BaseModel.prototype.delete.call(this);
     }
     
     async getActivityCategory() {
         const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
-        const activityCategories = await ActivityCategory.get({category_id: this.categoryId});
+        const activityCategory = await ActivityCategory.get({id: this.activityCategoryId, unique: true});
         
-        if (activityCategories.length == 0) {
-            throw new Error(`Unexpectedly did not find an activity category for category_id = '${this.categoryId}'`);
-        } else if (activityCategories.length > 1) {
-            throw new Error(`Unexpectedly found multiple activity categories for category_id = '${this.categoryId}'`);
+        if (!activityCategory) {
+            throw new Error(`Unexpectedly did not find an activity category for activity_category_id = '${this.activityCategoryId}'`);
         }
         
-        return activityCategories[0];
+        return activityCategory;
     }
     
     async getActivityAliases() {
         const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
-        return await ActivityAlias.get({activity_id: this.activityId});
+        return await ActivityAlias.get({activityId: this.id});
     }
     
     // ***************************************** //
@@ -216,7 +177,7 @@ class Activity extends BaseModel {
             },
             
             collect: async (message, nextMessage) => {
-                context.activity.activityName = nextMessage.content;
+                context.activity.name = nextMessage.content;
                 if (context.create) properties.shift();
             }
         });
@@ -238,7 +199,7 @@ class Activity extends BaseModel {
                     const activityCategory = activityCategories[x];
                     const emoji = EmojiMap.get(activityCategory.symbol);
                     emojiMap.set(emoji, activityCategory);
-                    options += `${emoji} - ${activityCategory.categoryName}\n`; 
+                    options += `${emoji} - ${activityCategory.name}\n`; 
                 }
                 
                 // Send the prompt
@@ -261,7 +222,7 @@ class Activity extends BaseModel {
                         await context.reactionCollector.stop();
                         context.reactionCollector = null;
                         
-                        context.activity.categoryId = activityCategory.categoryId;
+                        context.activity.activityCategoryId = activityCategory.id;
                         
                         if (context.create) {
                             properties.shift();
@@ -276,21 +237,19 @@ class Activity extends BaseModel {
             collect: async (message, nextMessage) => {
                 const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
                 
-                const activityCategories = await ActivityCategory.getByNameOrSymbol({
-                    categoryName: nextMessage.content,
-                    symbol: nextMessage.content}
-                );
+                const activityCategory = await ActivityCategory.get({
+                    nameOrSymbol: true,
+                    name: nextMessage.content,
+                    symbol: nextMessage.content
+                }, true);
                 
-                if (activityCategories.length == 0) {
+                if (!activityCategory) {
                     await message.channel.send(`Activity category not found: ${nextMessage.content}`);
-                } else if (activityCategories.length > 1) {
-                    await message.channel.send(`Multiple activity categories found: ${nextMessage.content}`);
                 } else {
                     context.reactionCollector.stop();
                     context.reactionCollector = null;
                     
-                    const activityCategory = activityCategories[0];
-                    context.activity.categoryId = activityCategory.categoryId;
+                    context.activity.activityCategoryId = activityCategory.id;
                     
                     if (context.create) properties.shift();
                 }

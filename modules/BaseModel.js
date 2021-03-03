@@ -77,9 +77,9 @@ class BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    static async get(conditions = {}) {
+    static async get(conditions = {}, uniqueArg = false) {
         let parsedConditions = conditions;
-        let unique = false;
+        let unique = uniqueArg;
         
         // Parse the select conditions
         if (typeof parsedConditions == 'object') {

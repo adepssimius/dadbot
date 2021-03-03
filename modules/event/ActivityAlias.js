@@ -14,28 +14,20 @@ const knex   = require(`${ROOT}/modules/Database`);
 class ActivityAlias extends BaseModel {
     static tableName = 'activity_alias';
     static orderBy   = 'alias';
+    static fields    = ['id', 'alias', 'activity_id', 'alliance_id', 'creator_id'];
+    static fieldMap  = BaseModel.getFieldMap(ActivityAlias.fields);
     
     constructor(data = {}) {
-        if (data.id == null) data.id = Snowflake.generate();
-        super(data);
-        
-        // Populate custom fields with the same database and object name
-        if (data.alias != null) this.alias = data.alias;
-        
-        // Populate custom fields with different database and object names
-        if      (data.activity_id != null) this.activityId = data.activity_id;
-        else if (data.activityId  != null) this.activityId = data.activityId;
-        
-        if      (data.alliance_id != null) this.allianceId = data.alliance_id;
-        else if (data.allianceId  != null) this.allianceId = data.allianceId;
-        
-        if      (data.creator_id  != null) this.creatorId  = data.creator_id;
-        else if (data.creatorId   != null) this.creatorId  = data.creatorId;
+        super(ActivityAlias, data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
+    
+    get tableName() {
+        return ActivityAlias.tableName;
+    }
     
     get alias() {
         return this.data.alias;
@@ -51,6 +43,10 @@ class ActivityAlias extends BaseModel {
     
     get creatorId() {
         return this.data.creator_id;
+    }
+    
+    get title() {
+        return `${this.alias}`;
     }
     
     // *********** //
@@ -79,22 +75,17 @@ class ActivityAlias extends BaseModel {
     
     // Standard get and create functions
     
-    static async get(whereClause) {
-        // Always search alias in upper case
-        if (whereClause != null && whereClause.alias != null) {
-            whereClause.alias = whereClause.alias.toUpperCase();
+    static parseConditions(conditions) {
+        // Handle any special fields
+        let parsedConditions = conditions;
+        
+        if (parsedConditions.alias) {
+            parsedConditions.alias = parsedConditions.alias.toUpperCase();
         }
         
-        let result = [];
-        let rows = await this._get(whereClause);
-        
-        for (let x = 0; x < rows.length; x++) {
-            result.push(new ActivityAlias(rows[x]));
-        }
-        
-        return result;
+        return parsedConditions;
     }
-
+    
     // Extra functions for this class
     
     //
@@ -106,49 +97,30 @@ class ActivityAlias extends BaseModel {
     // ******************** //
     
     async create() {
-        const BaseModel = require(`${ROOT}/modules/BaseModel`);
+        const Activity      = require(`${ROOT}/modules/event/Activity`);
+        const activityAlias = await ActivityAlias.get({alias: this.alias, unique: true});
+        const activity      = await Activity.get({alias: this.alias}, true);
         
-        const activityAliases = await ActivityAlias.get({alias: this.alias});
-        if (activityAliases.length > 0) {
-            const activityAlias = activityAliases[0];
-            throw new DuplicateError(`Alias is already used by another activity: ${activityAlias.alias}`);
+        if (activityAlias) {
+            throw new DuplicateError(`Alias is already used by another activity: ${activity.name} [${activityAlias.alias}]`);
         }
         
-        await BaseModel.create.call(this, ActivityAlias.tableName, this.data);
-    }
-    
-    async update() {
-        this.updatedAt = knex.fn.now();
+        // Create the ID for this activity category
+        this.id = Snowflake.generate();
         
-        let rowsChanged = await knex(ActivityAlias.tableName)
-            .where('id', this.id)
-            .update(this.data)
-            .then(result => {
-                return result;
-            });
-        
-        if (rowsChanged == 0) {
-            throw new Error('Update did not change any records!');
-        } else if (rowsChanged > 1) {
-            throw new Error('Update changed more then one record!');
-        }
-    }
-    
-    async delete() {
-        return await ActivityAlias._delete({id: this.id});
+        // And attempt to create it
+        await BaseModel.prototype.create.call(this);
     }
     
     async getActivity() {
         const Activity = require(`${ROOT}/modules/event/Activity`);
-        const activities = await Activity.get({'activity_id': this.activityId});
+        const activity = await Activity.get({id: this.activityId, unique: true});
         
-        if (activities.length == 0) {
-            throw new Error(`Unexpectedly did not find an activity with alias = '${this.alias}'`);
-        } else if (activities.length > 1) {
-            throw new Error(`Unexpectedly found multiple activities with alias = '${this.alias}'`);
+        if (!activity) {
+            throw new Error(`Unexpectedly did not find activity with alias = '${this.alias}'`);
         }
         
-        return activities[0];
+        return activity;
     }
 }
 

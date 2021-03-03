@@ -37,36 +37,36 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     const activitySearchString = args.join(' ').replace(/^"(.+)"$/g, "$1").replace(/^'(.+)'$/g, "$1");
     
     // Find the given activity
-    let activities = await Activity.getByNameOrAlias({
-        activity_name: activitySearchString,
+    let activity = await Activity.get({
+        nameOrAlias: true,
+        name: activitySearchString,
         alias: activitySearchString
-    });
+    }, true);
     
-    if (activities.length == 0) {
-        message.channel.send(`Could not find activity: '${activitySearchString}'`);
+    if (!activity) {
+        message.channel.send(`Could not find activity: ${activitySearchString}`);
         return;
     }
-    const activity = activities[0];
     
     // Check if this alias already exists
-    const activityAliases = await ActivityAlias.get({alias: alias});
+    let activityAlias = await ActivityAlias.get({alias: alias, unique: true});
     
-    if (activityAliases > 0) {
+    if (activityAlias) {
         message.channel.send(`There is already an activity with that alias`);
         return;
     }
     
     // Create the activity alias
-    const activityAlias = new ActivityAlias({
+    activityAlias = new ActivityAlias({
         alias: alias,
-        activityId: activity.activityId,
+        activityId: activity.id,
         creatorId: message.author.id
     });
     
     // Attempt to create the alias
     try {
         await activityAlias.create();
-        message.channel.send(`Activity alias created`);
+        message.channel.send(`Activity alias created: ${activity.name} [${activityAlias.alias}]`);
         
         client.logger.debug('Activity Alias:');
         client.logger.dump(activityAlias);
@@ -75,7 +75,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         if (error instanceof DuplicateError) {
             client.replyWithError(error.message, message);
         } else {
-            client.replyWithErrorAndDM(`Creation of activity alias failed: ${activityAlias.alias}`, message, error);
+            client.replyWithErrorAndDM(`Creation of activity alias failed: ${activity.name} [${activityAlias.alias}]`, message, error);
         }
     }
 };

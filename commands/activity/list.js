@@ -45,7 +45,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         const activity = activities[x];
         const activityCategory = await activity.getActivityCategory();
         
-        names.push(`${activity.activityName} [${activityCategory.category_name}]`);
+        names.push(`${activity.name} [${activityCategory.name}]`);
     }
     const nameList = ( names.length > 0 ? names.join('\n') : null );
     

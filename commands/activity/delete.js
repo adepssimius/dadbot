@@ -32,20 +32,22 @@ const run = async (message, args, level) => {
     }
     
     const value = args[0];
-    const activities = await Activity.getByNameOrAbbr({activity_name: value, activity_abbr: value});
+    let activity = await Activity.get({
+        nameOrAlias: true,
+        name: value,
+        alias: value
+    }, true);
     
-    if (activities.length == 0) {
-        message.channel.send(`Cannot find activity with that name or abbreviation`);
+    if (!activity) {
+        message.channel.send(`Could not find activity: '${value}'`);
         return;
     }
     
-    const activity = activities[0];
     try {
         await activity.delete();
-        message.channel.send(`Activity category deleted`);
-    
+        message.channel.send(`Activity deleted: ${activity.title}`);
     } catch (error) {
-        client.replyWithErrorAndDM(`Deletion of activity category failed: ${activity.activityName}`, message, error);
+        client.replyWithErrorAndDM(`Deletion of activity failed: ${activity.title}`, message, error);
     }
 };
 exports.run = run;

@@ -39,7 +39,7 @@ const run = async (message, args, level) => {
     // Check if the activity name was given as an argument
     if (args.length > 0) {
         const name = args.join(' ');
-        context.activity.activityName = name;
+        context.activity.name = name;
         context.properties.shift(); // Skip the name collection step
     }
     
@@ -57,10 +57,10 @@ const run = async (message, args, level) => {
         } else {
             context.collector.stop();
             context.collector = null;
-            	            
+            
             try {
                 await context.activity.create();
-                await message.channel.send(`Activity created`);
+                await message.channel.send(`Activity created: ${context.activity.title}`);
                 
                 client.logger.debug('Activity Created:');
                 client.logger.dump(context.activity);
