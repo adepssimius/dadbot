@@ -3,11 +3,10 @@
 const ROOT = '../..';
 
 // Load our classes
-const BaseModel        = require(`${ROOT}/modules/BaseModel`);
-const EmojiMap         = require(`${ROOT}/modules/EmojiMap`);
-const Snowflake        = require(`${ROOT}/modules/Snowflake`);
-//const ActivityAlias    = require(`${ROOT}/modules/event/ActivityAlias`);
-const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
+const BaseModel      = require(`${ROOT}/modules/BaseModel`);
+const EmojiMap       = require(`${ROOT}/modules/EmojiMap`);
+const Snowflake      = require(`${ROOT}/modules/Snowflake`);
+const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load external classes
 const Discord = require('discord.js');
@@ -135,7 +134,7 @@ class Activity extends BaseModel {
     
     async delete() {
         const ActivityAlias   = require(`${ROOT}/modules/event/ActivityAlias`);
-        const activityAliases = ActivityAlias.get({id: this.id});
+        const activityAliases = await ActivityAlias.get({activityId: this.id});
         
         for (let x = 0; x < activityAliases.length; x++) {
             await activityAliases[x].delete();
@@ -144,6 +143,34 @@ class Activity extends BaseModel {
         // And attempt to delete it
         await BaseModel.prototype.delete.call(this);
     }
+    
+    async toMessageContent() {
+        const activityCategory = await this.getActivityCategory();
+        const activityAliases  = await this.getActivityAliases();
+        
+        //
+        // TODO - Make this prettier
+        //
+        
+        const aliases = await this.getActivityAliasStrings();
+        const aliasList = ( activityAliases.length > 0 ? aliases.join(', ') : 'No aliases for this activity' );
+        
+        const embed = new Discord.MessageEmbed()
+            .setTitle('Activity')
+            .addFields(
+                { name: 'Name', value: this.name },
+                { name: 'Aliases', value: aliasList },
+                { name: 'Category', value: `${activityCategory.title}` },
+                { name: 'Maximum Fireteam Size', value: this.fireteamSize },
+                { name: 'Estimated Maximum Duration', value: `${this.estMaxDuration} minutes` }
+            );
+        
+        return embed;
+    }
+    
+    // ************************************************************ //
+    // * Instance Methods - Helper methods to get related objects * //
+    // ************************************************************ //
     
     async getActivityCategory() {
         const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
@@ -170,30 +197,6 @@ class Activity extends BaseModel {
         }
         
         return aliases;
-    }
-    
-    async toMessageContent() {
-        const activityCategory = await this.getActivityCategory();
-        const activityAliases  = await this.getActivityAliases();
-        
-        //
-        // TODO - Make this prettier
-        //
-        
-        const aliases = await this.getActivityAliasStrings();
-        const aliasList = ( activityAliases.length > 0 ? aliases.join(', ') : 'No aliases for this activity' );
-        
-        const embed = new Discord.MessageEmbed()
-            .setTitle('Activity')
-            .addFields(
-                { name: 'Name', value: this.name },
-                { name: 'Aliases', value: aliasList },
-                { name: 'Category', value: `${activityCategory.title}` },
-                { name: 'Maximum Fireteam Size', value: this.fireteamSize },
-                { name: 'Estimated Maximum Duration', value: `${this.estMaxDuration} minutes` }
-            );
-        
-        return embed;
     }
     
     // ***************************************** //

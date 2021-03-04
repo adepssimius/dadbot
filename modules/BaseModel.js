@@ -193,6 +193,16 @@ class BaseModel {
     
     async create() {
         const tableName = this.tableName;
+        
+        // For debugging purposes, generate the sql
+        const sql = knex(this.tableName)
+            .insert(this.data)
+            .toSQL();
+        
+        client.logger.debug(`Executing SQL: ${sql.sql}`);
+        client.logger.debug(`With Bindings: ${sql.bindings}`);
+        
+        // Execute the insert
         return await knex(tableName)
             .insert(this.data)
             .then(function(result) {

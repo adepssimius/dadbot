@@ -51,23 +51,26 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     
     async function attributeSelectLoop() {
         const emojiMap = new Map();
-        let options = '';
-        
+
         // Prepare the activity attribute editing emoji map
+        const options = [];
         for (let x = 0; x < context.properties.length; x++) {
             const property = context.properties[x];
             const emoji = EmojiMap.get(x+1);
             emojiMap.set(emoji, property);
-            options += `${emoji} - ${property.name}\n`;
+            options.push(`${emoji} - ${property.name}`);
         }
-        emojiMap.set(EmojiMap.get(':x:'), {name: 'stop'});
+        
+        const emoji = EmojiMap.get(':x:');
+        options.push(`${emoji} - Done editing activity`);
+        emojiMap.set(emoji, {name: 'stop'});
         
         // Share the current state of the activity
         message.channel.send(await context.activity.toMessageContent());
         
         // Prompt for an attribute to edit
         await message.channel.send('What would you like to change?');
-        const embed = new Discord.MessageEmbed().addFields({name: 'Select an attribute to edit', value: options.trim()});
+        const embed = new Discord.MessageEmbed().addFields({name: 'Select an attribute to edit', value: options.join('\n')});
         const replyMessage = await message.channel.send(embed);
         
         for (let emoji of emojiMap.keys()) {

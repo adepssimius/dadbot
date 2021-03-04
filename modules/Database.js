@@ -327,15 +327,16 @@ const dbInit = async () => {
                 table.string('id', 20).notNullable();
                 table.primary('id');
                 
-                table.string   ('alliance_id', 20);
                 table.string   ('activity_id', 20).notNullable();
-                table.string   ('category_id', 20).notNullable();
-                table.string   ('platform', 16).notNullable();
+                table.string   ('activity_category_id', 20).notNullable();
+                table.string   ('alliance_id', 20);
                 table.string   ('guild_id', 20).notNullable();
+                table.string   ('channel_name', 32).notNullable();
+                table.string   ('platform', 16).notNullable();
                 table.string   ('description', 256);
                 table.timestamp('start_time').notNullable();
                 table.integer  ('fireteam_size').notNullable();
-                table.integer  ('estimated_mins').notNullable();
+                table.integer  ('est_max_duration').notNullable();
                 table.boolean  ('is_private').notNullable();
                 table.boolean  ('auto_delete').notNullable();
                 table.string   ('creator_id', 20).notNullable();
@@ -346,19 +347,18 @@ const dbInit = async () => {
                 // Foreign Keys
                 //
                 
-                //table.foreign('alliance_id', 'event_fk1')
-                //    .references('id')
-                //    .inTable('alliance');
-                
-                //table.foreign('activity_id', 'event_fk2')
+                //table.foreign('activity_id', 'event_fk1')
                 //    .references('id')
                 //    .inTable('activity');
                 
-                //table.foreign('category_id', 'event_fk3')
+                //table.foreign('category_id', 'event_fk2')
                 //    .references('id')
                 //    .inTable('event_category');
                 
-                // TODO - Add this in when we integrate the guild table into the code
+                //table.foreign('alliance_id', 'event_fk3')
+                //    .references('id')
+                //    .inTable('alliance');
+                
                 //table.foreign('guild_id', 'event_fk4')
                 //    .references('id')
                 //    .inTable('guild');
