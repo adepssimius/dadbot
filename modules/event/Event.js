@@ -566,7 +566,7 @@ class Event extends BaseModel {
                         return;
                     }
                     
-                    if (activity.activityCategoryId != context.activity.activityCategoryId) {
+                    if (activity.activityCategoryId != context.event.activityCategoryId) {
                         await message.channel.send(`Activity entered is from a different category then was chosen`);
                         return;
                     }
@@ -585,7 +585,7 @@ class Event extends BaseModel {
             name: 'Start Date',
             
             prompt: async (message, nextMessage) => {
-                const now = new Timestamp(Date.now());
+                const now = new Timestamp();
                 
                 const emojiMap    = new Map();
                 const options     = [];
@@ -607,7 +607,7 @@ class Event extends BaseModel {
                 context.emojiMap = emojiMap;
                 
                 // Send the prompt
-                await message.channel.send(`On what day will this event take place? Please choose a reaction or respond via text.`);
+                await message.channel.send(`On what day will this event take place? Please choose a reaction or enter a letter via text.`);
                 const embed = new Discord.MessageEmbed().addFields({
                     name: 'Event Date',
                     value: menuOptions.join('\n')
@@ -676,9 +676,13 @@ class Event extends BaseModel {
             collect: async (message, nextMessage) => {
                 context.eventTime = nextMessage.content;
                 
-                const tsString = `${context.eventDate.formatDate('short')} ${context.eventTime}`;
-                const tsDate   = new Date(tsString);
-                const ts       = new Timestamp(tsDate, context.eventDate.tz);
+                try {
+                    var tsString = `${context.eventDate.formatDate('long')} ${context.eventTime}`;
+                    var ts       = new Timestamp(new Date(tsString), context.eventDate.tz);
+                } catch (error) {
+                    message.channel.send(`Invalid time: ${tsString}`);
+                    return;
+                }
                 
                 await message.channel.send(`Event date and time: ${ts.convert()}`);
                 context.event.startTime = ts.ts;

@@ -4,7 +4,15 @@ const ROOT = '..';
 
 class Timestamp {
     //constructor(ts, tz = null) {
-    constructor(ts, tz = 'America/New_York') {
+    constructor(ts = new Date(), tz = 'America/New_York') {
+        // Validate the provided timestamp
+        // This works because getTime() returns NaN when the date is invalid, NaN is always not equal to NaN
+        if (ts.getTime() != ts.getTime() || ts == 'Invalid Date') {
+            throw new Error(`Invalid datetime: ${ts}`);
+        }
+        
+        // Validate the timezone (TODO - Figure out how to do this)
+        
         this.ts = ts;
         this.tz = tz;
     }
