@@ -391,18 +391,23 @@ class Event extends BaseModel {
                 });
                 const replyMessage = await message.channel.send(embed);
                 
-                // Apply the reaction
-                for (let emoji of emojiMap.keys()) {
-                    replyMessage.react(emoji);
-                }
+                // Apply the reactions
+                const react = async () => {
+                    context.stopReacting = false;
+                    for (let emoji of emojiMap.keys()) {
+                        replyMessage.react(emoji);
+                        if (context.stopReacting) return;
+                    }
+                }; react();
                 
                 context.propertyCollector = replyMessage.createReactionCollector(async (reaction, user) => {
                     return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
                 });
                 
                 context.propertyCollector.on('collect', async (reaction, user) => {
-                    const activityCategory = context.emojiMap.get(reaction.emoji.name);
+                    context.stopReacting = false;
                     
+                    const activityCategory = context.emojiMap.get(reaction.emoji.name);
                     if (activityCategory) {
                         await context.propertyCollector.stop();
                         context.event.activityCategory = activityCategory;
@@ -418,14 +423,14 @@ class Event extends BaseModel {
             },
             
             collect: async (message, nextMessage) => {
-                const Activity         = require(`${ROOT}/modules/event/Activity`);
-                const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+                context.stopReacting = false;
                 
-                let activityCategory;
-                let activity;
+                const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+                const Activity         = require(`${ROOT}/modules/event/Activity`);
+                let   activity;
                 
                 // First attempt to get it using the activity category name or symbol
-                activityCategory = await ActivityCategory.get({
+                const activityCategory = await ActivityCategory.get({
                     nameOrSymbol: true,
                     name: nextMessage.content,
                     symbol: nextMessage.content,
@@ -507,18 +512,22 @@ class Event extends BaseModel {
                 });
                 const replyMessage = await message.channel.send(embed);
                 
-                // Apply the reaction
-                for (let emoji of emojiMap.keys()) {
-                    replyMessage.react(emoji);
-                }
+                // Apply the reactions
+                const react = async () => {
+                    context.stopReacting = false;
+                    for (let emoji of emojiMap.keys()) {
+                        replyMessage.react(emoji);
+                    }
+                }; react();
                 
                 context.propertyCollector = replyMessage.createReactionCollector(async (reaction, user) => {
                     return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
                 });
                 
                 context.propertyCollector.on('collect', async (reaction, user) => {
-                    const activity = context.emojiMap.get(reaction.emoji.name);
+                    context.stopReacting = false;
                     
+                    const activity = context.emojiMap.get(reaction.emoji.name);
                     if (activity) {
                         await context.propertyCollector.stop();
                         context.event.activity = activity;
@@ -534,10 +543,11 @@ class Event extends BaseModel {
             },
             
             collect: async (message, nextMessage) => {
+                context.stopReacting = false;
+                    
+                const emoji    = EmojiMap.get(nextMessage.content);
                 const Activity = require(`${ROOT}/modules/event/Activity`);
-                const emoji = EmojiMap.get(nextMessage.content);
-                
-                let activity;
+                let   activity;
                 
                 if (emoji) {
                     activity = context.emojiMap.get(emoji);
@@ -604,17 +614,23 @@ class Event extends BaseModel {
                 });
                 const replyMessage = await message.channel.send(embed);
                 
-                // Apply the reaction
-                for (let emoji of emojiMap.keys()) {
-                    replyMessage.react(emoji);
-                }
+                // Apply the reactions
+                const react = async () => {
+                    context.stopReacting = false;
+                    for (let emoji of emojiMap.keys()) {
+                        await replyMessage.react(emoji);
+                        if (context.stopReacting) return;
+                    }
+                }; react();
+                
                 context.propertyCollector = replyMessage.createReactionCollector(async (reaction, user) => {
                     return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
                 });
                 
                 context.propertyCollector.on('collect', async (reaction, user) => {
-                    const eventDate = context.emojiMap.get(reaction.emoji.name);
+                    context.stopReacting = true;
                     
+                    const eventDate = context.emojiMap.get(reaction.emoji.name);
                     if (eventDate) {
                         message.channel.send(`Event date: ${eventDate.formatDate()}`);
                         context.eventDate = eventDate;
@@ -631,12 +647,10 @@ class Event extends BaseModel {
             },
             
             collect: async (message, nextMessage) => {
-                const emoji = EmojiMap.get(nextMessage.content);
-                let eventDate;
+                context.stopReacting = true;
                 
-                if (emoji) {
-                    eventDate = context.emojiMap.get(emoji);
-                }
+                const emoji = EmojiMap.get(nextMessage.content);
+                const eventDate = (emoji ? context.emojiMap.get(emoji) : null);
                 
                 if (!eventDate) {
                     await message.channel.send(`Event date not found: ${nextMessage.content}`);
