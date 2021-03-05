@@ -148,12 +148,14 @@ class SyncChannel extends BaseModel {
     }
     
     async delete() {
-        const webhook = await client.fetchWebhook(this.webhookId);
-        
-        if (webhook != null) {
-            await webhook.delete();
+        try {
+            const webhook = await client.fetchWebhook(this.webhookId);
+            if (webhook != null) await webhook.delete();
+        } catch (error) {
+            if (error.name != 'DiscordAPIError' || error.message != 'Unknown Webhook') {
+                throw error;
+            }
         }
-        
         await BaseModel.prototype.delete.call(this);
     }
     

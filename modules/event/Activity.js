@@ -112,6 +112,17 @@ class Activity extends BaseModel {
             };
         }
         
+        if (conditions.categoryNameOrSymbol) {
+            const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+            return (query) => {
+                query.whereIn('activity_category_id', function() {
+                    this.select('id').from(ActivityCategory.tableName)
+                        .where('name', conditions.name)
+                        .orWhere('symbol', conditions.symbol.toUpperCase());
+                });
+            };
+        }
+        
         return conditions;
     }
     
@@ -183,6 +194,7 @@ class Activity extends BaseModel {
         return activityCategory;
     }
     
+    // * 
     async getActivityAliases() {
         const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
         return await ActivityAlias.get({activityId: this.id});
@@ -246,19 +258,24 @@ class Activity extends BaseModel {
                 const replyMessage = await message.channel.send(embed);
                 
                 // Apply the reaction
-                for (let emoji of emojiMap.keys()) {
-                    replyMessage.react(emoji);
-                }
+                const react = async () => {
+                    context.stopReacting = false;
+                    for (let emoji of emojiMap.keys()) {
+                        replyMessage.react(emoji);
+                        if (context.stopReacting) return;
+                    }
+                }; react();
                 
-                context.categorySelectReactionCollector = replyMessage.createReactionCollector(async (reaction, user) => {
+                context.propertyCollector = replyMessage.createReactionCollector(async (reaction, user) => {
                     return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
                 });
                 
-                context.categorySelectReactionCollector.on('collect', async (reaction, user) => {
-                    const activityCategory = emojiMap.get(reaction.emoji.name);
+                context.propertyCollector.on('collect', async (reaction, user) => {
+                    context.stopReacting = false;
                     
+                    const activityCategory = emojiMap.get(reaction.emoji.name);
                     if (activityCategory) {
-                        await context.categorySelectReactionCollector.stop();
+                        await context.propertyCollector.stop();
                         context.activity.activityCategoryId = activityCategory.id;
                         
                         if (context.create) {
@@ -272,8 +289,10 @@ class Activity extends BaseModel {
             },
             
             collect: async (message, nextMessage) => {
-                const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+                context.stopReacting = false;
+                context.propertyCollector.stop();
                 
+                const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
                 const activityCategory = await ActivityCategory.get({
                     nameOrSymbol: true,
                     name: nextMessage.content,
@@ -284,10 +303,6 @@ class Activity extends BaseModel {
                     await message.channel.send(`Activity category not found: ${nextMessage.content}`);
                     return;
                 }
-                
-                context.categorySelectReactionCollector.stop();
-                delete context.categorySelectReactionCollector;
-                
                 context.activity.activityCategoryId = activityCategory.id;
                 
                 if (context.create) properties.shift();
@@ -299,34 +314,55 @@ class Activity extends BaseModel {
             name: 'Fireteam Size',
             
             prompt: async (message, nextMessage) => {
-                const emojiMap = new Map();
+                // Build the options
+                const emojiMap    = new Map();
+                const options     = [];
+                const menuOptions = [];
                 
-                // Build the emoji -> activity category map
-                const fireteamSizes = [1,2,3,4,5,6];
-                
-                const replyMessage = await message.channel.send(`What maximum fireteam size do you want to set for this activity?`);
-                for (let x = 0; x < fireteamSizes.length; x++) {
-                    const fireteamSize = fireteamSizes[x];
+                // Get the options ready
+                for (let fireteamSize = 1; fireteamSize <= 6; fireteamSize++) {
                     const emoji = EmojiMap.get(fireteamSize);
-                    emojiMap.set(emoji, fireteamSize);
-                    replyMessage.react(emoji);
+                    options.push({emoji: emoji, value: fireteamSize});
                 }
+                
+                // Build the emoji map and menu
+                for (let x = 0; x < options.length; x++) {
+                    const option = options[x];
+                    
+                    emojiMap.set(option.emoji, option.value);
+                    if (option.menuOption) {
+                        menuOptions.push(`${option.emoji} - ${option.menuOption}`);
+                    }
+                }
+                context.emojiMap = emojiMap;
+                
+                // Send the prompt
+                const replyMessage = await message.channel.send(`What maximum fireteam size do you want to set for this activity?`);
+                
+                // Apply the reactions
+                const react = async () => {
+                    context.stopReacting = false;
+                    for (let emoji of emojiMap.keys()) {
+                        replyMessage.react(emoji);
+                        if (context.stopReacting) return;
+                    }
+                }; react();
                 
                 const emojiFilter = (reaction, user) => {
                     return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
                 };
                 
-                context.fireteamSizeReactionCollector = await replyMessage.createReactionCollector(emojiFilter);
+                context.propertyCollector = await replyMessage.createReactionCollector(emojiFilter);
                 
-                context.fireteamSizeReactionCollector.on('collect', async (reaction, user) => {
+                context.propertyCollector.on('collect', async (reaction, user) => {
+                    context.stopReacting = false;
+                    context.propertyCollector.stop();
+                    
                     const fireteamSize = emojiMap.get(reaction.emoji.name);
                     if (!fireteamSize) {
                         message.channel.send(`Invalid reaction`);
                         return;
                     }
-                    
-                    // Stop collecting fireteam size reactions
-                    context.fireteamSizeReactionCollector.stop();
                     
                     // Set the value and move on
                     context.activity.fireteamSize = fireteamSize;
@@ -341,8 +377,8 @@ class Activity extends BaseModel {
             },
             
             collect: async (message, nextMessage) => {
-                context.fireteamSizeReactionCollector.stop();
-                delete context.fireteamSizeReactionCollector;
+                context.stopReacting = false;
+                context.propertyCollector.stop();
                 
                 context.activity.fireteamSize = nextMessage.content;
                 if (context.create) properties.shift();

@@ -23,21 +23,20 @@ const help = {
     name: 'join',
     category: 'Alliance Administration',
     description: 'Join this clan discord to an alliance',
-    usage: 'alliance join <alliance-name|alias>'
+    usage: 'alliance join <name|alias>',
+    minArgs: 1,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length == 0) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const value = args.join(' ').replace(/^"(.+)"$/g, "$1").replace(/^'(.+)'$/g, "$1");
     const alliances = await Alliance.get({nameOrShortName: true, name: value, shortName: value});
     
     if (alliances.length == 0) {
-        message.channel.send(`Cannot find alliance: '${value}'`);
+        message.channel.send(`Cannot find alliance: ${value}`);
         return;
     }
     const alliance = alliances[0];
@@ -65,7 +64,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
             guild.allianceId = alliance.id;
             await guild.update();
         }
-        message.channel.send(`Joined clan alliance: ${alliance.getTitle()}`);
+        message.channel.send(`Joined clan alliance: ${alliance.title}`);
         
         client.logger.debug('Guild:');
         client.logger.dump(guild);
@@ -74,7 +73,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         if (error instanceof DuplicateError) {
             client.replyWithError(error.message, message);
         } else {
-            client.replyWithErrorAndDM(`Joining of alliance failed: guild id = ${message.guild.id} : alliance = ${alliance.getTitle()}`, message, error);
+            client.replyWithErrorAndDM(`Joining of alliance failed: guild id = ${message.guild.id} : alliance = ${alliance.title}`, message, error);
         }
     }
 };

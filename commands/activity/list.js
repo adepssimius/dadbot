@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const Activity = require(`${ROOT}/modules/event/Activity`);
+const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -21,34 +21,69 @@ const help = {
     name: 'list',
     category: 'Activity Administration',
     description: 'List all activities',
-    usage: 'activity list'
+    usage: 'activity list [<category-name|symbol>]',
+    minArgs: null,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length != 0) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
-    const activities = await Activity.get();
+    let activityCategories;
     
-    let response = `Found ${activities.length} activity `;
-    if (activities.length == 0 || activities.length > 1) {
-        response += 'activities';
+    if (args.length == 0) {
+        activityCategories = await ActivityCategory.get();
     } else {
-        response += 'activity';
-    }
-    
-    const names = [];
-    for (let x = 0; x < activities.length; x++) {
-        const activity = activities[x];
-        const activityCategory = await activity.getActivityCategory();
+        const value = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
+        activityCategories = await ActivityCategory.get({nameOrSymbol: true,  name: value, symbol: value});
         
-        names.push(`${activity.name} [${activityCategory.name}]`);
+        if (activityCategories.length == 0) {
+            message.channel.send(`Could not activity category name or symbol: ${value}`);
+            return;
+        }
     }
-    const nameList = ( names.length > 0 ? names.join('\n') : null );
     
-    message.channel.send(response + (nameList != null ? '\n```' + nameList + '```' : ''));
+    let responses = [];
+    
+    for (let c = 0; c < activityCategories.length; c++) {
+        const activityCategory = activityCategories[c];
+        let activities = await activityCategory.getActivities();
+        
+        let response = `__**${activityCategory.name}**__\n`;
+        response += `Found ${activities.length} `;
+        
+        if (activities.length == 0 || activities.length > 1) {
+            response += 'activities';
+        } else {
+            response += 'activity';
+        }
+        
+        const activityBlurbs = [];
+        for (let a = 0; a < activities.length; a++) {
+            const activity = activities[a];
+            const activityAliases = await activity.getActivityAliases();
+            let   activityAliasesBlurb = 'No Aliases Yet';
+            
+            if (activityAliases.length > 0) {
+                const activityAliasNames = [];
+                for (let x = 0; x < activityAliases.length; x++) {
+                    activityAliasNames.push(activityAliases[x].alias);
+                }
+                activityAliasesBlurb = activityAliasNames.join(', ');
+            } 
+            activityBlurbs.push(`${activity.name} [${activityAliasesBlurb}]`);
+        }
+        
+        if (activityBlurbs.length > 0) {
+            response += '\n```' + activityBlurbs.join('\n') + '```';
+        }
+        
+        responses.push(response);
+    }
+    
+    for (let r = 0; r < responses.length; r++) {
+        message.channel.send(responses[r]);
+    }
 };
 exports.run = run;

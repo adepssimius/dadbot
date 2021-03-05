@@ -22,15 +22,14 @@ const help = {
     name: 'delete',
     category: 'Message Synchronization',
     description: 'Channel synchronization group administration command',
-    usage: 'sync-channel-group delete <group-name>'
+    usage: 'sync-channel-group delete <name>',
+    minArgs: 1,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
-    if (args.length != 1) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     // Get the alliance for this guild
     const alliance = await Alliance.get({guildId: message.guild.id, unique: true});
@@ -40,7 +39,7 @@ const run = async (message, args, level) => {
     }
     
     // Grab the name
-    const name = args[0];
+    const name = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
     const syncChannelGroup = await SyncChannelGroup.get({name: name, allianceId: alliance.id, unique: true});
     
     if (syncChannelGroup == null) {

@@ -18,11 +18,14 @@ const help = {
     name: 'info',
     category: 'Message Synchronization',
     description: 'Show the details about a synchronized channel',
-    usage: 'sync-command info [<channel>]'
+    usage: 'sync-channel info [<channel>]',
+    minArgs: null,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    message.channel.send(`${help.command} ${help.name} not yet implemented`);
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
+    message.channel.send(`${client.config.prefix}${commandName} ${actionName} not yet implemented`);
 };
 exports.run = run;

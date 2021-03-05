@@ -21,15 +21,14 @@ const help = {
     name: 'list',
     category: 'Alliance Administration',
     description: 'List all alliances',
-    usage: 'alliance list'
+    usage: 'alliance list',
+    minArgs: null,
+    maxArgs: 0
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length != 0) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const alliances = await Alliance.get();
     
@@ -44,7 +43,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
         const allianceListElements = [];
         for (let x = 0; x < alliances.length; x++) {
             const alliance = alliances[x];
-            allianceListElements.push(alliance.getTitle());
+            allianceListElements.push(alliance.title);
         }
         response += '```' + allianceListElements.join('\n') + '```';
     }

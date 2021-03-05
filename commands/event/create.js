@@ -25,13 +25,19 @@ const help = {
     name: 'create',
     category: 'Event Coordination',
     description: 'Create a new scheduled event (lfg)',
-    usage: 'event|lfg create <group-name>'
+    usage: 'event|lfg create [<activity-name|category-name>]',
+    minArgs: null,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {    // Let's put things in context
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
+    
     // Get the alliance for this guild
     const alliance = await Alliance.get({guildId: message.guild.id, unique: true});
+    
+    // Let's put things in context
     const context = {
         create: true,
         event: new Event({

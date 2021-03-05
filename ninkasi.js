@@ -29,7 +29,7 @@ const init = async () => {
     
     // Then we load events, which will include our message and ready event.
     const eventFiles = fs.readdirSync(`${ROOT}/events/`);
-    client.logger.log(`Loading a total of $eventFiles.length} events.`);
+    client.logger.log(`Loading a total of ${eventFiles.length} events`);
     eventFiles.forEach(file => {
         const eventName = file.split('.')[0];
         client.logger.log(`Loading Event: ${eventName}`);
@@ -39,14 +39,6 @@ const init = async () => {
         // the discord.js event. This line is awesome by the way. Just saying.
         client.on(eventName, event.bind(null));
     });
-    
-    // Generate a cache of client permissions for pretty perm names in commands.
-    client.levelCache = {};
-    // TODO - Add this part
-    //for (let i = 0; i < client.config.permLevels.length; i++) {
-    //    const thisLevel = client.config.permLevels[i];
-    //    client.levelCache[thisLevel.name] = thisLevel.level;
-    //}
     
     // Here we login the client.
     client.login(client.config.token);

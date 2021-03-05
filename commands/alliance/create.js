@@ -23,15 +23,14 @@ const help = {
     name: 'create',
     category: 'Alliance Category Administration',
     description: 'Command for creating an alliance',
-    usage: 'alliance create <name> <alias>'
+    usage: 'alliance create <name> <alias>',
+    minArgs: 2,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
-    if (args.length < 2) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     // Grab the symbol from the end and then merge the rest for the category name
     const shortName = args.pop();

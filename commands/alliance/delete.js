@@ -22,15 +22,14 @@ const help = {
     name: 'delete',
     category: 'Alliance Administration',
     description: 'Command for deleting an alliance',
-    usage: 'alliance delete <name|alias>'
+    usage: 'alliance delete <name|alias>',
+    minArgs: 1,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
-    if (args.length == 0) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const value = args.join(' ').replace(/^"(.+)"$/g, "$1").replace(/^'(.+)'$/g, "$1");
     

@@ -126,6 +126,15 @@ class ActivityCategory extends BaseModel {
         // And attempt to delete it
         await BaseModel.prototype.delete.call(this);
     }
+    
+    // ************************************************************ //
+    // * Instance Methods - Helper methods to get related objects * //
+    // ************************************************************ //
+    
+    async getActivities() {
+        const Activity = require(`${ROOT}/modules/event/Activity`);
+        return await Activity.get({activityCategoryId: this.id});
+    }
 }
 
 module.exports = ActivityCategory;

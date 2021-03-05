@@ -23,15 +23,14 @@ const help = {
     name: 'create-alias',
     category: 'Activity Administration',
     description: 'Create an alias for an activity',
-    usage: 'activity create-alias <name|existing-alias> <new-alias>'
+    usage: 'activity create-alias <name|existing-alias> <new-alias>',
+    minArgs: 2,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length < 2) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const alias = args.pop();
     const activitySearchString = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');

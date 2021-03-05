@@ -22,15 +22,14 @@ const help = {
     name: 'delete',
     category: 'Activity Category Administration',
     description: 'Command for deleting activity categories',
-    usage: 'activity-category delete <category-name|symbol>'
+    usage: 'activity-category delete <name|symbol>',
+    minArgs: 1,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
-    if (args.length == 0) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const value = args.join(' ').replace(/^"(.+)"$/g, '$1').replace(/^'(.+)'$/g, '$1');
     let activityCategory = await ActivityCategory.get({

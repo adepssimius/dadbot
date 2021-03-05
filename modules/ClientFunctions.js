@@ -96,53 +96,53 @@ module.exports = (client) => {
         // Check whether the command or alias exists
         const command = client.commands.get(commandName) || client.commands.get(client.aliases.get(commandName));
         if (!command) {
-            message.channel.send(`Unrecognized command: ${client.config.prefix}${commandName}`);
+            message.reply(`Unrecognized command: ${client.config.prefix}${commandName}`);
             return;
         }
         
         // Some commands may not be useable in DMs
         if (command && !message.guild && command.conf.guildOnly) {
-            return message.channel.send('This command is unavailable via private message. Please run this command in a Discord server channel.');
+            return message.reply('This command is unavailable via private message. Please run this command in a Discord server channel.');
         }
         
         if (!client.checkPermLevel(message, command.conf.permLevel)) {
-            return message.channel.send(`You do not have permission to use this command.`);
+            return message.reply(`You do not have permission to use this command.`);
         }
         
         client.logger.cmd(`[CMD] ${message.author.username} (${message.author.id}) executed command: ${colorizeCommand(command.help.name)} ${args.join(' ')}`);
         
         try {
-            command.run(message, args);
+            command.run(message, commandName, args);
         } catch (error) {
             console.error(error);
             message.reply('There was an error trying to execute that command!');
         }
     };
     
-    client.runCommandAction = async (message, command, actionName, args) => {
+    client.runCommandAction = async (message, command, commandName, actionName, args) => {
         //
         // TODO - Add handling for unrecognized command actions (and make sure we have it for commands as well)
         //
         
         const action  = command.actions.get(actionName) || command.actions.get(command.actionAliases.get(actionName));
         if (!action) {
-            message.channel.send(`Unrecognized command action: ${client.config.prefix}${command.help.name} ${actionName}`);
+            message.reply(`Unrecognized command action: ${client.config.prefix}${commandName} ${actionName}`);
             return;
         }
         
         // Some commands may not be useable in DMs
         if (action  && !message.guild && action.conf.guildOnly) {
-            return message.channel.send('This command action is unavailable via private message. Please run this command in a Discord server channel.');
+            return message.reply('This command action is unavailable via private message. Please run this command in a Discord server channel.');
         }
         
         if (!client.checkPermLevel(message, action.conf.permLevel)) {
-            return message.channel.send(`You do not have permission to use this command.`);
+            return message.reply(`You do not have permission to use this command.`);
         }
         
         client.logger.cmd(`[CMD] ${message.author.username} (${message.author.id}) executed action: ${colorizeCommand(command.help.name)} ${colorizeAction(action.help.name)} ${args.join(' ')}`);
         
         try {
-            action.run(message, args);
+            action.run(message, commandName, actionName, args);
         } catch (error) {
             console.error(error);
             message.reply('There was an error trying to execute that command action!');
@@ -210,5 +210,23 @@ module.exports = (client) => {
         
         client.logger.error(oops);
         client.logger.dump(error);
+    };
+    
+    client.usage = (help, commandName, actionName) => {
+        const usageArgs = help.usage.split(' ');
+        
+        if (commandName) usageArgs[0] = commandName;
+        if (actionName)  usageArgs[1] = actionName;
+        
+        return usageArgs.join(' ');
+    };
+    
+    client.argCountIsValid = (help, args, message, commandName, actionName) => {
+        if ( (help.minArgs && args.length < help.minArgs) || (help.maxArgs && args.length > help.maxArgs) ) {
+            message.reply(`Usage: ${client.config.prefix}${client.usage(help, commandName, actionName)}`);
+            return false;
+        }
+        
+        return true;
     };
 };

@@ -22,15 +22,14 @@ const help = {
     name: 'delete-alias',
     category: 'Activity Administration',
     description: 'Delete an alias for an activity',
-    usage: 'activity delete-alias <alias>'
+    usage: 'activity delete-alias <alias>',
+    minArgs: 1,
+    maxArgs: 1
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length != 1) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const alias = args[0];
     

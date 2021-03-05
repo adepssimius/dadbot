@@ -24,20 +24,19 @@ const help = {
     name: 'link',
     category: 'Message Syncronization',
     description: 'Link this channel to a synchronization group',
-    usage: 'sync-command link <sync-group> [<channel>]'
+    usage: 'sync-channel link <group-name> [<channel>]',
+    minArgs: 1,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
+    
     //
     // TODO - Enhance this function so that a channel reference can be given
     // instead of always linking to the channel from which the command was called
     //
-    
-    if (args.length != 1) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
     
     // Get the alliance for this guild
     const alliance = await Alliance.get({guildId: message.guild.id, unique: true});
@@ -47,7 +46,7 @@ const run = async (message, args, level) => {
     }
     
     // Attempt to retrieve the specified channel synchronization group
-    const name = args[0];
+    const name = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
     const syncChannelGroup = await SyncChannelGroup.get({name: name, allianceId: alliance.id, unique: true});
     
     if (syncChannelGroup == null) {

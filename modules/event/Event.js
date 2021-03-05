@@ -424,6 +424,7 @@ class Event extends BaseModel {
             
             collect: async (message, nextMessage) => {
                 context.stopReacting = false;
+                context.propertyCollector.stop();
                 
                 const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
                 const Activity         = require(`${ROOT}/modules/event/Activity`);
@@ -457,8 +458,6 @@ class Event extends BaseModel {
                     message.channel.send(`Event type found: ${activity.title}`);
                     context.event.activity = activity;
                 }
-                
-                context.propertyCollector.stop();
                 
                 if (context.create) {
                     properties.shift();
@@ -517,6 +516,7 @@ class Event extends BaseModel {
                     context.stopReacting = false;
                     for (let emoji of emojiMap.keys()) {
                         replyMessage.react(emoji);
+                        if (context.stopReacting) return;
                     }
                 }; react();
                 
@@ -528,23 +528,27 @@ class Event extends BaseModel {
                     context.stopReacting = false;
                     
                     const activity = context.emojiMap.get(reaction.emoji.name);
-                    if (activity) {
-                        await context.propertyCollector.stop();
-                        context.event.activity = activity;
-                        
-                        if (context.create) {
-                            context.properties.shift();
-                            await properties[0].prompt(message, nextMessage);
-                        } else {
-                            context.editorMessageCollector.stop();
-                        }
+                    if (!activity) {
+                        message.channel.send(`Invalid reaction`);
+                        return;
+                    }
+                    
+                    await context.propertyCollector.stop();
+                    context.event.activity = activity;
+                    
+                    if (context.create) {
+                        context.properties.shift();
+                        await properties[0].prompt(message, nextMessage);
+                    } else {
+                        context.editorMessageCollector.stop();
                     }
                 });
             },
             
             collect: async (message, nextMessage) => {
                 context.stopReacting = false;
-                    
+                context.propertyCollector.stop();
+                
                 const emoji    = EmojiMap.get(nextMessage.content);
                 const Activity = require(`${ROOT}/modules/event/Activity`);
                 let   activity;
@@ -574,7 +578,6 @@ class Event extends BaseModel {
                 
                 message.channel.send(`Event type found: ${activity.title}`);
                 context.event.activity = activity;
-                context.propertyCollector.stop();
                 
                 if (context.create) properties.shift();
             }

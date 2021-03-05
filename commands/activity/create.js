@@ -22,11 +22,15 @@ const help = {
     name: 'create',
     category: 'Activity Administration',
     description: '',
-    usage: 'activity create <group-name>'
+    usage: 'activity create [<name>]',
+    minArgs: null,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
+
     // Let's put things in context
     const context = {
         create: true,

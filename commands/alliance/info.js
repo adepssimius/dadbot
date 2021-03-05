@@ -24,13 +24,16 @@ const help = {
     name: 'info',
     category: 'Alliance Administration',
     description: 'Show the details about an alliance',
-    usage: 'alliance info [<name|alias>]'
+    usage: 'alliance info [<name|alias>]',
+    minArgs: null,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    let alliance;
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
+    let alliance;
     if (args.length > 0) {
         const value = args.join(' ').replace(/^"(.+)"$/g, "$1").replace(/^'(.+)'$/g, "$1");
         const alliances = await Alliance.get({nameOrShortName: true, name: value, shortName: value});

@@ -21,15 +21,14 @@ const help = {
     name: 'set-symbol',
     category: 'Activity Category Administration',
     description: 'Change the symbol of an activity category',
-    usage: 'activity-category set-symbol <symbol> <new-symbol>'
+    usage: 'activity-category set-symbol <symbol> <new-symbol>',
+    minArgs: 2,
+    maxArgs: 2
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length != 2) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const oldSymbol = args[0];
     const newSymbol = args[1];

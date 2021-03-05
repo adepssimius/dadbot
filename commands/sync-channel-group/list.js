@@ -23,15 +23,14 @@ const help = {
     name: 'list',
     category: 'Message Synchronization',
     description: 'List all channel synchronization groups',
-    usage: 'sync-channel-group list'
+    usage: 'sync-channel-group list',
+    minArgs: null,
+    maxArgs: 0
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length != 0) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     // Get the alliance for this guild
     const alliance = await Alliance.get({guildId: message.guild.id, unique: true});

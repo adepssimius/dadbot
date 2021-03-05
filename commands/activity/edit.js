@@ -25,15 +25,14 @@ const help = {
     name: 'edit',
     category: 'Activity Administration',
     description: 'Make changes to an activity',
-    usage: 'activity edit <name|alias>'
+    usage: 'activity edit <name|alias>',
+    minArgs: 1,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length == 0) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     // Let's put things in context
     const context = {create: false};

@@ -22,11 +22,15 @@ const help = {
     name: 'unlink',
     category: 'Message Synchronization',
     description: 'Unlink this channel from a synchronization group',
-    usage: 'sync-command unlink [<channel>]'
+    usage: 'sync-channel unlink [<channel>]',
+    minArgs: null,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
+    
     //
     // TODO - Enhance this function so that a channel reference can be given
     // instead of always linking to the channel from which the command was called
@@ -49,9 +53,7 @@ const run = async (message, args, level) => {
         await syncChannel.delete();
         message.channel.send(`Channel unlinked from channel synchronization group: ${syncChannelGroup.name}`);
     } catch (error) {
-        const details = `Error unlinking channel from channel synchronization group: ${syncChannelGroup.name}`;
-        message.channel.send(details);
-        client.logger.error(details);
+        await client.replyWithErrorAndDM(`Unlinking channel from channel synchronization group failed: ${syncChannelGroup.name}`, message, error);
         client.logger.dump(error);
     }
 };

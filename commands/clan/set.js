@@ -25,15 +25,14 @@ const help = {
     name: 'info',
     category: 'Clan Administration',
     description: 'Set the value for a clan attriibute',
-    usage: 'clan set [name|alias|id|timezone] <value>'
+    usage: 'clan set [name|alias|id|timezone] <value>',
+    minArgs: 2,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length < 2) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const attribute = args.shift();
     const value     = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');

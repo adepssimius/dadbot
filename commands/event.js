@@ -17,12 +17,16 @@ const help = {
     name: 'event',
     category: 'Event Coordination',
     description: 'Event coordination (lfg) command',
-    usage: 'event|lfg <action> <args>'
+    usage: 'event <action> [<args>]',
+    minArgs: 1,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
+const run = async (message, commandName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName)) return;
+    
     const actionName = args.shift().toLowerCase();
-    client.runCommandAction(message, this, actionName, args, level);
+    client.runCommandAction(message, this, commandName, actionName, args);
 };
 exports.run = run;

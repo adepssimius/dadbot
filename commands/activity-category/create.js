@@ -22,15 +22,14 @@ const help = {
     name: 'create',
     category: 'Activity Category Administration',
     description: 'Command for creating activity categories',
-    usage: 'activity-category create <name> [<symbol>]'
+    usage: 'activity-category create <name> [<symbol>]',
+    minArgs: 1,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
-    if (args.length < 1) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     // Grab the symbol from the end and then merge the rest for the category name
     let symbol = args.pop();

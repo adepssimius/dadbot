@@ -21,22 +21,21 @@ const help = {
     name: 'set-name',
     category: 'Activity Category Administration',
     description: 'Change the name of an activity category',
-    usage: 'activity-category set-name <symbol> <name>'
+    usage: 'activity-category set-name <symbol> <name>',
+    minArgs: 2,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length < 2) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
-    
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
+
     const symbol  = args.shift();
     const newName = args.join(' ');
     
     let activityCategory = await ActivityCategory.get({symbol: symbol, unique: true});
     if (!activityCategory) {
-        message.channel.send(`Could not find activity category: '${symbol}'`);
+        message.channel.send(`Could not find activity category: ${symbol}`);
         return;
     }
     

@@ -17,12 +17,16 @@ const help = {
     name: 'activity-category',
     category: 'Activity Category Administration',
     description: 'Activity category administration command',
-    usage: 'activity-category <action> <args>'
+    usage: 'activity-category <action> [<args>]',
+    minArgs: 1,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
+const run = async (message, commandName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName)) return;
+    
     const actionName = args.shift().toLowerCase();
-    client.runCommandAction(message, this, actionName, args, level);
+    client.runCommandAction(message, this, commandName, actionName, args);
 };
 exports.run = run;

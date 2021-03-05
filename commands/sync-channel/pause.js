@@ -18,11 +18,14 @@ const help = {
     name: 'pause',
     category: 'Message Synchronization',
     description: 'Pause synchronization for this channel',
-    usage: 'sync-command pause [<channel>]'
+    usage: 'sync-channel pause [<channel>]',
+    minArgs: null,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
-    message.channel.send(`${help.command} ${help.name} not yet implemented`);
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
+    message.channel.send(`${client.config.prefix}${commandName} ${actionName} not yet implemented`);
 };
 exports.run = run;

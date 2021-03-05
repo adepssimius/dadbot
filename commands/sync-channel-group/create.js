@@ -23,15 +23,14 @@ const help = {
     name: 'create',
     category: 'Message Synchronization',
     description: 'Create a new channel synchronization group',
-    usage: 'sync-channel-group create <group-name>'
+    usage: 'sync-channel-group create <name>',
+    minArgs: 1,
+    maxArgs: null
 };
 exports.help = help;
 
-const run = async (message, args, level) => {
-    if (args.length != 1) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     // Get the alliance for this guild
     const alliance = await Alliance.get({guildId: message.guild.id, unique: true});
@@ -41,7 +40,7 @@ const run = async (message, args, level) => {
     }
     
     // Grab the name
-    const name = args[0];
+    const name = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
     
     // Create the channel synchronization group object
     const syncChannelGroup = await new SyncChannelGroup({name: name, allianceId: alliance.id});

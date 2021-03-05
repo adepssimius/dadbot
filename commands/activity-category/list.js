@@ -21,15 +21,14 @@ const help = {
     name: 'list',
     category: 'Activity Category Administration',
     description: 'List all activity categories',
-    usage: 'activity-category list'
+    usage: 'activity-category list',
+    minArgs: null,
+    maxArgs: 0
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length != 0) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const activityCategories = await ActivityCategory.get();
     

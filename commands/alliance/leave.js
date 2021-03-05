@@ -23,15 +23,14 @@ const help = {
     name: 'leave',
     category: 'Alliance Administration',
     description: 'Separate this clan discord from an alliance',
-    usage: 'alliance leave'
+    usage: 'alliance leave',
+    minArgs: null,
+    maxArgs: 0
 };
 exports.help = help;
 
-const run = async (message, args, level) => { // eslint-disable-line no-unused-vars
-    if (args.length > 0) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
+const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
+    if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const guilds = await Guild.get({id: message.guild.id});
     if (guilds.length > 0 && guilds[0].allianceId == null) {
@@ -42,7 +41,7 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     
     const alliances = await Alliance.get({id: guild.allianceId});
     if (alliances.length == 0) {
-        message.channel.send(`Cannot find the alliance for this clan discord: alliance id = '${guild.allianceId}'`);
+        message.channel.send(`Cannot find the alliance for this clan discord: alliance id = ${guild.allianceId}`);
         return;
     }
     const alliance = alliances[0];
@@ -50,10 +49,10 @@ const run = async (message, args, level) => { // eslint-disable-line no-unused-v
     try {
         guild.allianceId = null;
         await guild.update();
-        message.channel.send(`Left clan alliance: ${alliance.getTitle()}`);
+        message.channel.send(`Left clan alliance: ${alliance.title}`);
     
     } catch (error) {
-        client.replyWithErrorAndDM(`Leaving of alliance failed: guild id = ${message.guild.id} : alliance = ${alliance.getTitle()}`, message, error);
+        client.replyWithErrorAndDM(`Leaving of alliance failed: guild id = ${message.guild.id} : alliance = ${alliance.title}`, message, error);
     }
 };
 exports.run = run;
