@@ -8,9 +8,7 @@ const SyncMessage = require(`${ROOT}/modules/sync/SyncMessage`);
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
-// The MESSAGE event runs anytime a message is received
-// Note that due to the binding of client to every event, every event
-// goes `client, other, args` when this function is run.
+// Emitted whenever a message is created.
 
 module.exports = async (message) => {
     // Ignore messages from the bot

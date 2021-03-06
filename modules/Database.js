@@ -21,8 +21,9 @@ const dbInit = async () => {
                 table.string('id', 20).notNullable();
                 table.primary('id');
                 
-                table.string ('timezone', 32).notNullable();
-                table.boolean('private_event_default').notNullable();
+                table.string ('username', 32).notNullable();
+                table.string ('timezone', 32);
+                table.boolean('private_event_default').notNullable().defaultTo(false);
                 table.timestamps(false, true);
             
             }).then(client.logger.log('Created Table: guardian'));
@@ -382,7 +383,8 @@ const dbInit = async () => {
                 table.primary('channel_id');
                 
                 table.string('event_id', 20).notNullable();
-                table.string('channel_guild_id', 20).notNullable();
+                table.string('guild_id', 20).notNullable();
+                table.string('guild_name', 100);
                 table.timestamps(false, true);
                 
                 //
@@ -397,7 +399,7 @@ const dbInit = async () => {
                 //    .references('id')
                 //    .inTable('event');
                 
-                //table.foreign('channel_guild_id', 'event_channel_fk3')
+                //table.foreign('guild_id', 'event_channel_fk3')
                 //    .references('id')
                 //    .inTable('guild');
                 
@@ -438,6 +440,37 @@ const dbInit = async () => {
                 //    .inTable('guild');
                 
             }).then(client.logger.log('Created Table: participant'));
+        }
+    });
+    
+    await knex.schema.hasTable('event_channel_group').then(function(exists) {
+        if (!exists) {
+            knex.schema.createTable('event_channel_group', function (table) {
+                table.string('id', 20).notNullable();
+                table.primary('id');
+                
+                table.string('name', 32).notNullable();
+                table.string('alliance_id', 20).notNullable();
+                table.boolean('creator_id', 20).notNullable();
+                table.timestamps(false, true);
+                
+            }).then(client.logger.log('Created Table: event_channel_group'));
+        }
+    });
+    
+    await knex.schema.hasTable('command_channel').then(function(exists) {
+        if (!exists) {
+            knex.schema.createTable('command_channel', function (table) {
+                table.string('channel_id', 20).notNullable();
+                table.primary('channel_id');
+                
+                table.string('type', 16).notNullable();
+                table.string('event_channel_group_id', 20);
+                table.string('alliance_id', 20).notNullable();
+                table.string('creator_id', 20).notNullable();
+                table.timestamps(false, true);
+                
+            }).then(client.logger.log('Created Table: command_channel'));
         }
     });
 };

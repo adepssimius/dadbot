@@ -77,6 +77,12 @@ class Timestamp {
         return new Intl.DateTimeFormat(undefined, options).format(this.ts);
     }
     
+    formatTime(timeStyle = 'full') {
+        const options = {timeStyle: timeStyle};
+        if (this.tz != null) options.timeZone = this.tz;
+        return new Intl.DateTimeFormat(undefined, options).format(this.ts);
+    }
+    
     getWeekdayName() {
         const options = {weekday: 'long'};
         if (this.tz != null) options.timeZone = this.tz;

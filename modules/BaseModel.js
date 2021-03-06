@@ -13,6 +13,7 @@ class BaseModel {
     static fieldMap  = null;
     
     data = {};
+	temp = {};
     
     constructor(ChildClass, data) {
         // Iterate over the incoming field data
@@ -43,7 +44,13 @@ class BaseModel {
     }
     
     get id() {
+        this.validateFieldName('id');
         return this.data.id;
+    }
+    
+    get creatorId() {
+        this.validateFieldName('creator_id');
+        return this.data.creator_id;
     }
     
     get createdAt() {
@@ -54,12 +61,23 @@ class BaseModel {
         return this.data.updated_at;
     }
     
+    get creator() {
+        this.validateFieldName('creator_id');
+        return this.temp.creator;
+    }
+    
     // *********** //
     // * Setters * //
     // ********** //
     
     set id(value) {
+        this.validateFieldName('id');
         this.data.id = value;
+    }
+    
+    set creatorId(value) {
+        this.validateFieldName('creator_id');
+        this.data.creator_id = value;
     }
     
     set createdAt(value) {
@@ -73,9 +91,22 @@ class BaseModel {
         this.data.updated_at = value;
     }
     
+    set creator(creator) {
+        this.validateFieldName('creator_id');
+        this.temp.creator = creator;
+        if (creator) this.creatorId = creator.id;
+    }
+    
     // ***************** //
     // * Class Methods * //
     // ***************** //
+    
+    validateFieldName(fieldName) {
+        if (this.constructor.fields.indexOf(fieldName) == -1) {
+            throw new RangeError(`Column ${this.tableName}.${fieldName} does exist`);
+        }
+        return true;
+    }
     
     static async get(conditions = {}, uniqueArg = false) {
         let parsedConditions = conditions;
@@ -241,6 +272,19 @@ class BaseModel {
             .then(result => {
                 return result;
             });
+    }
+    
+    // ***************************************** //
+    // * Properties Array for User Interaction * //
+    // ***************************************** //
+    
+    async getCreator() {
+        if (!this.creator) {
+            const Guardian = require(`${ROOT}/modules/alliance/Guardian`);
+            this.creator = await Guardian.get({id: this.creatorId, unique: true});
+        }
+        
+        return this.creator;
     }
 }
 

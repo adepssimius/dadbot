@@ -11,77 +11,105 @@ const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unus
 
 class EventChannel extends BaseModel {
     static tableName = 'event_channel';
+    static orderBy   = 'created_at';
+    static fields    = ['channel_id', 'event_id', 'guild_id', 'guild_name'];
+    static fieldMap  = BaseModel.getFieldMap(EventChannel.fields);
     
     constructor(data) {
-        super({});
-        this.data = data;
+        super(EventChannel, data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
     
-    get channel_id() {
+    get tableName() {
+        return EventChannel.tableName;
+    }
+    
+    get channelId() {
         return this.data.channel_id;
     }
     
-    get event_id() {
-        return this.data.activity_id;
+    get eventId() {
+        return this.data.event_id;
     }
     
-    get channel_guild_id() {
-        return this.data.channel_guild_id;
+    get guildId() {
+        return this.data.guild_id;
+    }
+    
+    get guildName() {
+        return this.data.guild_name;
     }
     
     // *********** //
     // * Setters * //
     // *********** //
     
-    set channel_id(value) {
+    set channelId(value) {
         this.data.channel_id = value;
     }
     
-    set event_id(value) {
-        this.data.activity_id = value;
+    set eventId(value) {
+        this.data.event_id = value;
     }
     
-    set channel_guild_id(value) {
-        this.data.channel_guild_id = value;
+    set guildId(value) {
+        this.data.guild_id = value;
+    }
+    
+    set guildName(value) {
+        this.data.guild_name = value;
     }
     
     // ***************** //
     // * Class Methods * //
     // ***************** //
     
-    static async get(whereClause) {
-        let result = [];
-        let rows = await this._get(whereClause);
-        
-        for (let x = 0; x < rows.length; x++) {
-            result.push(new EventChannel(rows[x]));
-        }
-        
-        return result;
-    }
-    
-    static async create(data) {
-        // TODO - Figure out if there is some sort of duplicate check we should do for these (I think not)
-        const eventChannels = await EventChannel.get(data);
-        
-        if (eventChannels.length > 0) {
-            throw new DuplicateError(`There is already an event channel with the ID ${data.channel_id}`);
-        }
-        
-        let result = await this._create(data); // eslint-disable-line no-unused-vars
-        return new EventChannel(data);
-    }
+    //static parseConditions(conditions) {
+    //    // Handle any special fields
+    //    let parsedConditions = conditions;
+    //    
+    //    return parsedConditions;
+    //}
     
     // ******************** //
     // * Instance Methods * //
     // ******************** //
     
-    async delete() {
-        return await EventChannel._delete({channel_id: this.channel_id});
+    async create() {
+        const eventChannel = await EventChannel.get({eventId: this.eventId, guildId: this.guildId, unique: true});
+        
+        if (eventChannel) {
+            throw new DuplicateError(`There is already an event channel in that guild for this event: activity_id = ${this.activityId}, guild_id = ${this.guild_id}`);
+        }
+        
+        // Attempt to insert the record into the database
+        await BaseModel.prototype.create.call(this);
+    }
+    
+    // ************************************************************ //
+    // * Instance Methods - Helper methods to get related objects * //
+    // ************************************************************ //
+    
+    async getEvent() {
+        if (this.event) {
+            return this.event;
+        }
+        
+        if (!this.eventId) {
+            return null;
+        }
+        
+        const Event = require(`${ROOT}/modules/event/Event`);
+        const event = await Event.get({id: this.eventId, unique: true});
+        
+        if (!event) {
+            throw new Error(`Unexpectedly did not find event with this id = '${this.eventId}'`);
+        }
+        
+        return event;
     }
 }
 

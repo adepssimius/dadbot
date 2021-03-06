@@ -4,12 +4,12 @@ const ROOT = '../..';
 
 // Load our classes
 const BaseModel      = require(`${ROOT}/modules/BaseModel`);
-const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 const Snowflake      = require(`${ROOT}/modules/Snowflake`);
+const Guardian       = require(`${ROOT}/modules/alliance/Guardian`);
+const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
-const knex   = require(`${ROOT}/modules/Database`);
 
 class ActivityAlias extends BaseModel {
     static tableName = 'activity_alias';
@@ -41,10 +41,6 @@ class ActivityAlias extends BaseModel {
         return this.data.alliance_id;
     }
     
-    get creatorId() {
-        return this.data.creator_id;
-    }
-    
     get title() {
         return `${this.alias}`;
     }
@@ -63,10 +59,6 @@ class ActivityAlias extends BaseModel {
     
     set allianceId(value) {
         this.data.alliance_id = value;
-    }
-    
-    set creatorId(value) {
-        this.data.creator_id = value;
     }
     
     // ***************** //
@@ -105,12 +97,20 @@ class ActivityAlias extends BaseModel {
             throw new DuplicateError(`Alias is already used by another activity: ${activity.name} [${activityAlias.alias}]`);
         }
         
-        // Create the ID for this activity category
-        this.id = Snowflake.generate();
+        // Make sure the creator is in the database
+        if (await this.getCreator() == null) {
+            this.creator = new Guardian({id: this.creatorId});
+            await this.creator.create();
+        }
         
-        // And attempt to create it
+        // Generate the id and attempt to insert the record into the database
+        this.id = Snowflake.generate();
         await BaseModel.prototype.create.call(this);
     }
+    
+    // ************************************************************ //
+    // * Instance Methods - Helper methods to get related objects * //
+    // ************************************************************ //
     
     async getActivity() {
         const Activity = require(`${ROOT}/modules/event/Activity`);

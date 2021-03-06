@@ -8,9 +8,7 @@ const SyncMessage = require(`${ROOT}/modules/sync/SyncMessage`);
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
-// 
-// TODO - Add event description here (see message.js for an example)
-// 
+// Emitted whenever a message is deleted.
 
 module.exports = async (message) => {
     // Ignore deletes from the bot

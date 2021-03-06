@@ -46,7 +46,7 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     const syncChannelGroup = await new SyncChannelGroup({name: name, allianceId: alliance.id});
     
     try {
-        syncChannelGroup.create();
+        await syncChannelGroup.create();
         message.channel.send(`Created channel synchronization group: ${name}`);
         
         client.logger.debug('Channel Synchronization Group:');

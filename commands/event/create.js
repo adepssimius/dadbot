@@ -104,8 +104,9 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
             context.event.channelName = channelName;
             
             await context.event.create();
-            await message.channel.send(`Event created`);
+            context.event.setupEventChannels(message);
             
+            await message.channel.send(`Event created`);
             client.logger.debug('Event Created:');
             client.logger.dump(context.event);
         

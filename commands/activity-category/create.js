@@ -64,7 +64,7 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     
     // Attempt to create the activity category
     try {
-        activityCategory.create();
+        await activityCategory.create();
         message.channel.send(`Activity category created: ${activityCategory.title}`);
         
         client.logger.debug('Activity Category:');

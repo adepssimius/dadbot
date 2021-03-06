@@ -4,8 +4,9 @@ const ROOT = '../..';
 
 // Load our classes
 const BaseModel      = require(`${ROOT}/modules/BaseModel`);
-const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 const Snowflake      = require(`${ROOT}/modules/Snowflake`);
+const Guardian       = require(`${ROOT}/modules/alliance/Guardian`);
+const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -36,10 +37,6 @@ class Alliance extends BaseModel {
         return this.data.short_name;
     }
     
-    get creatorId() {
-        return this.data.creator_id;
-    }
-    
     get title() {
         return `${this.name} [${this.shortName}]`;
     }
@@ -58,10 +55,6 @@ class Alliance extends BaseModel {
         } else {
             this.data.short_name = value.toUpperCase();
         }
-    }
-    
-    set creatorId(value) {
-        this.data.creator_id = value;
     }
     
     // ***************** //
@@ -113,10 +106,14 @@ class Alliance extends BaseModel {
             throw new DuplicateError(`Existing alliance found with the same name or short name: ${this.title}`);
         }
         
-        // Create the ID for this alliance
-        this.id = Snowflake.generate();
+        // Make sure the creator is in the database
+        if (await this.getCreator() == null) {
+            this.creator = new Guardian({id: this.creatorId});
+            await this.creator.create();
+        }
         
-        // And attempt to create it
+        // Generate the id and attempt to insert the record into the database
+        this.id = Snowflake.generate();
         await BaseModel.prototype.create.call(this);
     }
 }

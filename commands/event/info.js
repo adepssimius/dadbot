@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const Activity = require(`${ROOT}/modules/event/Activity`);
+const Event = require(`${ROOT}/modules/event/Event`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -17,11 +17,11 @@ const conf = {
 exports.conf = conf;
 
 const help = {
-    command: 'activity',
+    command: 'event',
     name: 'info',
-    category: 'Activity Administration',
-    description: 'Show the details about an activity',
-    usage: 'activity info <name|alias>',
+    category: 'Event Administration',
+    description: 'Show the details about an event',
+    usage: 'event info <id>',
     minArgs: 1,
     maxArgs: null
 };
@@ -31,13 +31,13 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const value = args.join(' ');
-    let activity = await Activity.get({ nameOrAlias: true, name: value, alias: value, unique: true });
+    let event = await Event.get({id: value, unique: true});
     
-    if (!activity) {
-        message.channel.send(`Could not find activity: ${value}`);
+    if (!event) {
+        message.channel.send(`Could not find event: ${value}`);
         return;
     }
     
-    message.channel.send(await activity.toMessageContent());
+    message.channel.send(await event.toMessageContent());
 };
 exports.run = run;

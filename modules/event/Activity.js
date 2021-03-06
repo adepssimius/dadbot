@@ -6,6 +6,7 @@ const ROOT = '../..';
 const BaseModel      = require(`${ROOT}/modules/BaseModel`);
 const EmojiMap       = require(`${ROOT}/modules/EmojiMap`);
 const Snowflake      = require(`${ROOT}/modules/Snowflake`);
+const Guardian       = require(`${ROOT}/modules/alliance/Guardian`);
 const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load external classes
@@ -52,10 +53,6 @@ class Activity extends BaseModel {
         return this.data.alliance_id;
     }
     
-    get creatorId() {
-        return this.data.creator_id;
-    }
-    
     get title() {
         return `${this.name}`;
     }
@@ -82,10 +79,6 @@ class Activity extends BaseModel {
     
     set allianceId(value) {
         this.data.alliance_id = value;
-    }
-    
-    set creatorId(value) {
-        this.data.creator_id = value;
     }
     
     // ***************** //
@@ -136,10 +129,14 @@ class Activity extends BaseModel {
             throw new DuplicateError(`Existing activity found with the same name: ${this.name}`);
         }
         
-        // Create the ID for this activity category
-        this.id = Snowflake.generate();
+        // Make sure the creator is in the database
+        if (await this.getCreator() == null) {
+            this.creator = new Guardian({id: this.creatorId});
+            await this.creator.create();
+        }
         
-        // And attempt to create it
+        // Generate the id and attempt to insert the record into the database
+        this.id = Snowflake.generate();
         await BaseModel.prototype.create.call(this);
     }
     

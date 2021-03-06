@@ -7,6 +7,7 @@ const BaseModel = require(`${ROOT}/modules/BaseModel`);
 const EmojiMap  = require(`${ROOT}/modules/EmojiMap`);
 const Snowflake = require(`${ROOT}/modules/Snowflake`);
 const Timestamp = require(`${ROOT}/modules/Timestamp`);
+const Guardian  = require(`${ROOT}/modules/alliance/Guardian`);
 
 // Load external classes
 const Discord = require('discord.js');
@@ -34,7 +35,6 @@ class Event extends BaseModel {
                        , 'owner_id' ];
     
     static fieldMap  = BaseModel.getFieldMap(Event.fields);
-	temp = {};
     
     constructor(data) {
         super(Event, data);
@@ -96,11 +96,7 @@ class Event extends BaseModel {
         return this.data.auto_delete;
     }
     
-    get creator_id() {
-        return this.data.creator_id;
-    }
-    
-    get owner_id() {
+    get ownerId() {
         return this.data.owner_id;
     }
     
@@ -116,6 +112,10 @@ class Event extends BaseModel {
         return this.temp.ts;
     }
     
+    get owner() {
+        return this.temp.owner;
+    }
+    
     // *********** //
     // * Setters * //
     // *********** //
@@ -124,8 +124,28 @@ class Event extends BaseModel {
         this.data.activity_id = value;
     }
     
+    set activity(activity) {
+        this.temp.activity = activity;
+        
+        if (activity) {
+            this.activityId         = activity.id;
+            this.activityCategoryId = activity.activityCategoryId;
+            
+            if (this.fireteamSize   == null) this.fireteamSize   = activity.fireteamSize;
+            if (this.estMaxDuration == null) this.estMaxDuration = activity.estMaxDuration;
+        }
+    }
+    
     set activityCategoryId(value) {
         this.data.activity_category_id = value;
+    }
+    
+    set activityCategory(activityCategory) {
+        this.temp.activityCategory = activityCategory;
+        
+        if (activityCategory) {
+            this.activityCategoryId = activityCategory.id;
+        }
     }
     
     set allianceId(value) {
@@ -168,25 +188,16 @@ class Event extends BaseModel {
         this.data.auto_delete = value;
     }
     
-    set creatorId(value) {
-        this.data.creator_id = value;
-    }
-    
     set ownerId(value) {
         this.data.owner_id = value;
     }
     
-    set activity(value) {
-        this.temp.activity      = value;
-        this.activityId         = value.id;
-        this.activityCategoryId = value.activityCategoryId;
-        this.fireteamSize       = value.fireteamSize;
-        this.estMaxDuration     = value.estMaxDuration;
-    }
-    
-    set activityCategory(value) {
-        this.temp.activityCategory = value;
-        this.activityCategoryId    = value.id;
+    set owner(owner) {
+        this.temp.owner = owner;
+        
+        if (owner) {
+            this.ownerId = owner.id;
+        }
     }
     
     set ts(value) {
@@ -206,10 +217,20 @@ class Event extends BaseModel {
     // ******************** //
     
     async create() {
-        // Create the ID for this event
-        this.id = Snowflake.generate();
+        // Make sure the creator is in the database
+        if (await this.getCreator() == null) {
+            this.creator = new Guardian({id: this.creatorId});
+            await this.creator.create();
+        }
         
-        // And attempt to create it
+        // Make sure the owner is in the database
+        if (await this.getOwner() == null) {
+            this.owner = new Guardian({id: this.creatorId});
+            await this.owner.create();
+        }
+        
+        // Generate the id and attempt to insert the record into the database
+        this.id = Snowflake.generate();
         await BaseModel.prototype.create.call(this);
     }
     
@@ -218,31 +239,39 @@ class Event extends BaseModel {
     }
     
     async toMessageContent() {
-        /*
+        const activity         = await this.getActivity();
         const activityCategory = await this.getActivityCategory();
-        const activityAliases  = await this.getActivityAliases();
+        const creator          = await this.getCreator();
+        const owner            = await this.getOwner();
         
-        //
-        // TODO - Make this prettier
-        //
+        const startTs = new Timestamp(this.startTime);
+        const startDate = startTs.formatDate();
+        const startTime = startTs.formatTime('short');
         
-        const aliases = await this.getActivityAliasStrings();
-        const aliasList = ( activityAliases.length > 0 ? aliases.join(', ') : 'No aliases for this activity' );
+        const participants = [];
+        const alternates   = [];
+        
+        const participantNames = [];
         
         const embed = new Discord.MessageEmbed()
-            .setTitle('Scheduled Event')
+            .setTitle(`${activity.name} [${activityCategory.name}]`)
             .addFields(
-                { name: 'Name', value: this.name },
-                { name: 'Aliases', value: aliasList },
-                { name: 'Category', value: `${activityCategory.title}` },
-                { name: 'Maximum Fireteam Size', value: this.fireteamSize },
-                { name: 'Estimated Maximum Duration', value: `${this.estMaxDuration} minutes` }
-            );
+                { name: 'Date', value: startDate, inline: true },
+                { name: 'Time', value: startTime, inline: true }
+            )
+            .addFields(
+                { name: 'Privacy', value: ( this.isPrivate ? 'Clan' : 'Alliance' ), inline: true },
+                { name: 'Auto Remove Event', value: ( this.autoDelete ? `${this.estMaxDuration} minutes after start` : 'No' ), inline: true }
+            )
+            .addField('Description', ( this.description ? this.description : 'No description given' ))
+            .addField(
+                `Guardians Joined: ${participants.length}/${this.fireteamSize}`,
+                ( participantNames.length == 0 ? 'None Yet' : participantNames.join(', ') )
+            )
+            .setTimestamp()
+            .setFooter(`Creator: ${creator.username} • Owner: ${owner.username}`);
         
         return embed;
-        */
-        
-        return `TBD`;
     }
     
     async deriveChannelName() {
@@ -267,13 +296,55 @@ class Event extends BaseModel {
         return channelName.toLowerCase();
     }
     
+    async deriveChannelTopic() {
+        const startTs  = new Timestamp(this.startTime);
+        const Activity = require(`${ROOT}/modules/event/Activity`);
+        const activity = await this.getActivity();
+        
+        return `${activity.name} @ ${startTs.convert()}`;
+    }
+    
+    // ****************************************************** //
+    // * Instance Methods - Channel and Reaction Management * //
+    // ****************************************************** //
+    
+    async setupEventChannels(message) {
+        const eventMessageContent = await this.toMessageContent();
+        const EventChannel = require(`${ROOT}/modules/event/EventChannel`);
+        let   eventChannel = await EventChannel.get({eventId: this.id, guildId: this.guildId, unique: true});
+        
+        if (eventChannel) {
+            throw new Error(`There is already event channel in this discord clan for this event`);
+        }
+        
+        // First create the channel for the originating guild
+        const channel = await message.guild.channels.create(await this.deriveChannelName(), {
+            type: 'text',
+            topic: await this.deriveChannelTopic(),
+            nsfw: false,
+            parent: message.channel.parent
+        });
+        
+        // Save the event channel to the database
+        eventChannel = new EventChannel({
+            channelId: channel.id,
+            eventId: this.id,
+            guildId: message.guild.id,
+            guildName: message.guild.name
+        });
+        await eventChannel.create();
+        
+        // Send the event info to the new channel
+        channel.send(eventMessageContent);
+    }
+    
     // ************************************************************ //
     // * Instance Methods - Helper methods to get related objects * //
     // ************************************************************ //
     
     async getActivity() {
         const Activity = require(`${ROOT}/modules/event/Activity`);
-        const activity = await Activity.get({id: this.id, unique: true});
+        const activity = await Activity.get({id: this.activityId, unique: true});
         
         if (!activity) {
             throw new Error(`Unexpectedly did not find an activity for activity_id = '${this.activityId}'`);
@@ -320,18 +391,15 @@ class Event extends BaseModel {
         return guild;
     }
     
-    async getCreator() {
-        const Guardian = require(`${ROOT}/modules/alliance/Guardian`);
-        const guardian = await Guardian.get({id: this.creatorId, unique: true});
-        
-        if (!guardian) {
-            throw new Error(`Unexpectedly did not find a guardian for id = '${this.creatorId}'`);
+    async getOwner() {
+        if (this.owner) {
+            return this.owner;
         }
         
-        return guardian;
-    }
-    
-    async getOwner() {
+        if (this.creatorId == this.ownerId && this.creator) {
+            return this.creator;
+        }
+        
         const Guardian = require(`${ROOT}/modules/alliance/Guardian`);
         const guardian = await Guardian.get({id: this.ownerId, unique: true});
         

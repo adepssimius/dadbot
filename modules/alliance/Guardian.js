@@ -5,64 +5,84 @@ const ROOT = '../..';
 // Load our classes
 const BaseModel      = require(`${ROOT}/modules/BaseModel`);
 const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
-const Snowflake      = require(`${ROOT}/modules/Snowflake`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 class Guardian extends BaseModel {
     static tableName = 'guardian';
+    static orderBy   = 'id';
+    static fields    = ['id', 'username', 'timezone', 'private_event_default'];
+    static fieldMap  = BaseModel.getFieldMap(Guardian.fields);
     
     constructor(data) {
-        super({});
-        this.data = data;
+        super(Guardian, data);
     }
     
-    // ********************* //
-    // * Getters & Setters * //
-    // ********************* //
+    // *********** //
+    // * Getters * //
+    // *********** //
     
-    get guardian_id() {
-        return this.data.category_id;
+    get tableName() {
+        return Guardian.tableName;
+    }
+    
+    get username() {
+        return this.data.username;
     }
     
     get timezone() {
         return this.data.timezone;
     }
     
+    get privateEventDefault() {
+        return this.data.private_event_default;
+    }
+    
+    // *********** //
+    // * Setters * //
+    // *********** //
+    
+    set timezone(value) {
+        this.data.timezone = value;
+    }
+    
+    set username(value) {
+        this.data.username = value;
+    }
+    
+    set privateEventDefault(value) {
+        this.data.private_event_default = value;
+    }
+    
     // ***************** //
     // * Class Methods * //
     // ***************** //
     
-    static async get(whereClause) {
-        let result = [];
-        let rows = await this._get(whereClause);
-        
-        for (let x = 0; x < rows.length; x++) {
-            result.push(new Guardian(rows[x]));
-        }
-        
-        return result;
-    }
-    
-    static async create(data) {
-        const guardians = await Guardian.get(data);
-        
-        if (guardians.length > 0) {
-            throw new DuplicateError(`There is already a guardian with the ID ${data.guardian_id}`);
-        }
-        
-        data.guardian_id = Snowflake.generate();
-        let result = await this._create(data); // eslint-disable-line no-unused-vars
-        return new Guardian(data);
+    static parseConditions(conditions) {
+        return conditions;
     }
     
     // ******************** //
     // * Instance Methods * //
     // ******************** //
     
-    async delete() {
-        return await Guardian._delete({guardian_id: this.guardian_id});
+    async create() {
+        const guardian = await Guardian.get({id: this.id, unique: true});
+        
+        // Check if this is a guardian is already in the system
+        if (guardian) {
+            throw new DuplicateError(`Guardian already found within id: ${this.id}`);
+        }
+        
+        // If need be, retrieve the username
+        if (!this.username) {
+            const user = await client.users.fetch(this.id);
+            if (user) this.username = user.username;
+        }
+        
+        // Attempt to create it
+        await BaseModel.prototype.create.call(this);
     }
 }
 

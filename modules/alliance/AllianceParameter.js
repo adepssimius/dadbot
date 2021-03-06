@@ -4,8 +4,9 @@ const ROOT = '../..';
 
 // Load our classes
 const BaseModel      = require(`${ROOT}/modules/BaseModel`);
-const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 const Snowflake      = require(`${ROOT}/modules/Snowflake`);
+const Guardian       = require(`${ROOT}/modules/alliance/Guardian`);
+const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -14,7 +15,7 @@ const knex   = require(`${ROOT}/modules/Database`);
 class AllianceParameter extends BaseModel {
     static tableName = 'alliance_parameter';
     static orderBy   = 'parameter_name';
-    
+
     constructor(data) {
         super({});
         this.data = data;

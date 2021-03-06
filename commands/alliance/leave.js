@@ -39,12 +39,17 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     }
     const guild = guilds[0];
     
-    const alliances = await Alliance.get({id: guild.allianceId});
-    if (alliances.length == 0) {
+    const alliance = await Alliance.get({id: guild.allianceId, unique: true});
+    if (!alliance) {
         message.channel.send(`Cannot find the alliance for this clan discord: alliance id = ${guild.allianceId}`);
         return;
     }
-    const alliance = alliances[0];
+    
+    //
+    // Todo - Leaving an alliance currently leaves stuff in place
+    //        This includes sync channels and will also include LFG
+    //        This needs to be considered and dealt with
+    //
     
     try {
         guild.allianceId = null;

@@ -4,9 +4,10 @@ const ROOT = '../..';
 
 // Load our classes
 const BaseModel       = require(`${ROOT}/modules/BaseModel`);
+const Snowflake       = require(`${ROOT}/modules/Snowflake`);
+const Guardian        = require(`${ROOT}/modules/alliance/Guardian`);
 const DuplicateError  = require(`${ROOT}/modules/error/DuplicateError`);
 const ForeignKeyError = require(`${ROOT}/modules/error/ForeignKeyError`);
-const Snowflake       = require(`${ROOT}/modules/Snowflake`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -41,10 +42,6 @@ class ActivityCategory extends BaseModel {
         return this.data.alliance_id;
     }
     
-    get creatorId() {
-        return this.data.creator_id;
-    }
-    
     get title() {
         return `${this.name} [${this.symbol}]`;
     }
@@ -63,10 +60,6 @@ class ActivityCategory extends BaseModel {
     
     set allianceId(value) {
         this.data.alliance_id = value;
-    }
-    
-    set creatorId(value) {
-        this.data.creator_id = value;
     }
     
     // ***************** //
@@ -108,10 +101,14 @@ class ActivityCategory extends BaseModel {
             throw new DuplicateError(`Existing category found with the same name or symbol: ${this.title}`);
         }
         
-        // Create the ID for this activity category
-        this.id = Snowflake.generate();
+        // Make sure the creator is in the database
+        if (await this.getCreator() == null) {
+            this.creator = new Guardian({id: this.creatorId});
+            await this.creator.create();
+        }
         
-        // And attempt to create it
+        // Generate the id and attempt to insert the record into the database
+        this.id = Snowflake.generate();
         await BaseModel.prototype.create.call(this);
     }
     

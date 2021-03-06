@@ -174,7 +174,7 @@ class SyncMessage extends BaseModel {
                 };
                 
                 const clonedSyncMessage = new SyncMessage(data);
-                clonedSyncMessage.create();
+                await clonedSyncMessage.create();
                 
                 client.logger.debug(`Message Cloned - Sync Channel [${x+1}]`);
                 client.logger.dump(clonedSyncMessage);
