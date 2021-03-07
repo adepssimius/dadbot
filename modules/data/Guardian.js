@@ -10,58 +10,45 @@ const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 class Guardian extends BaseModel {
-    static tableName = 'guardian';
-    static orderBy   = 'id';
-    static fields    = ['id', 'username', 'timezone', 'private_event_default'];
-    static fieldMap  = BaseModel.getFieldMap(Guardian.fields);
+    static schema = this.parseSchema({
+        tableName: 'guardian',
+        orderBy: 'username',
+        fields: [
+            { dbFieldName: 'id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'username', type: 'string', length: 32, nullable: false },
+            { dbFieldName: 'timezone', type: 'string', length: 32, nullable: true },
+            { dbFieldName: 'private_event_default', type: 'boolean', nullable: false, default: false }
+        ]
+    });
     
     constructor(data) {
-        super(Guardian, data);
+        // Set default values
+        //if (data) {
+        //    if (!data.privateEventDefault) data.privateEventDefault = false;
+        //}
+        
+        super(data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
     
-    get tableName() {
-        return Guardian.tableName;
-    }
-    
-    get username() {
-        return this.data.username;
-    }
-    
-    get timezone() {
-        return this.data.timezone;
-    }
-    
-    get privateEventDefault() {
-        return this.data.private_event_default;
-    }
+    // No custom getters required
     
     // *********** //
     // * Setters * //
     // *********** //
     
-    set timezone(value) {
-        this.data.timezone = value;
-    }
-    
-    set username(value) {
-        this.data.username = value;
-    }
-    
-    set privateEventDefault(value) {
-        this.data.private_event_default = value;
-    }
+    // No custom setters required
     
     // ***************** //
     // * Class Methods * //
     // ***************** //
     
-    static parseConditions(conditions) {
-        return conditions;
-    }
+    //static parseConditions(conditions) {
+    //    return conditions;
+    //}
     
     // ******************** //
     // * Instance Methods * //

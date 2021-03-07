@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const Alliance = require(`${ROOT}/modules/alliance/Alliance`);
+const Alliance = require(`${ROOT}/modules/data/Alliance`);
 
 // Load external classes
 const Discord = require('discord.js');

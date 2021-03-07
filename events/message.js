@@ -3,7 +3,7 @@
 const ROOT = '..';
 
 // Load our classes
-const SyncMessage = require(`${ROOT}/modules/sync/SyncMessage`);
+const Message = require(`${ROOT}/modules/data/Message`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -19,7 +19,7 @@ module.exports = async (message) => {
     
     // If we find the prefix, attempt to process the command
     if (message.content.startsWith(client.config.prefix)) {
-        //if (syncChannel != null) {
+        //if (channel != null) {
         //    message.channel.send('Commands not accepted within a synchronization channel');
         //} else {
         //    client.runCommand(message);
@@ -30,5 +30,5 @@ module.exports = async (message) => {
     }
     
     // Otherwise attempt to synchronize this message
-    SyncMessage.sync(message);
+    Message.sync(message);
 };

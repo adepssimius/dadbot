@@ -3,8 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const Alliance       = require(`${ROOT}/modules/alliance/Alliance`);
-const Guild          = require(`${ROOT}/modules/alliance/Guild`);
+const Alliance       = require(`${ROOT}/modules/data/Alliance`);
+const Guild          = require(`${ROOT}/modules/data/Guild`);
 const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons

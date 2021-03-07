@@ -5,7 +5,7 @@ const ROOT = '../..';
 // Load our classes
 const BaseModel       = require(`${ROOT}/modules/BaseModel`);
 const Snowflake       = require(`${ROOT}/modules/Snowflake`);
-const Guardian        = require(`${ROOT}/modules/alliance/Guardian`);
+const Guardian        = require(`${ROOT}/modules/data/Guardian`);
 const DuplicateError  = require(`${ROOT}/modules/error/DuplicateError`);
 const ForeignKeyError = require(`${ROOT}/modules/error/ForeignKeyError`);
 
@@ -13,34 +13,25 @@ const ForeignKeyError = require(`${ROOT}/modules/error/ForeignKeyError`);
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 class ActivityCategory extends BaseModel {
-    static tableName = 'activity_category';
-    static orderBy   = 'name';
-    static fields    = ['id', 'name', 'symbol', 'alliance_id', 'creator_id'];
-    static fieldMap  = BaseModel.getFieldMap(ActivityCategory.fields);
+    static schema = this.parseSchema({
+        tableName: 'activity_category',
+        orderBy: 'name',
+        fields: [
+            { dbFieldName: 'id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'name', type: 'string', length: 32, nullable: false },
+            { dbFieldName: 'symbol', type: 'string', length: 1, nullable: false },
+            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true },
+            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
+        ]
+    });
     
     constructor(data) {
-        super(ActivityCategory, data);
+        super(data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
-    
-    get tableName() {
-        return ActivityCategory.tableName;
-    }
-    
-    get name() {
-        return this.data.name;
-    }
-    
-    get symbol() {
-        return this.data.symbol;
-    }
-    
-    get allianceId() {
-        return this.data.alliance_id;
-    }
     
     get title() {
         return `${this.name} [${this.symbol}]`;
@@ -50,17 +41,7 @@ class ActivityCategory extends BaseModel {
     // * Setters * //
     // *********** //
     
-    set name(value) {
-        this.data.name = value;
-    }
-    
-    set symbol(value) {
-        this.data.symbol = value.toUpperCase();
-    }
-    
-    set allianceId(value) {
-        this.data.alliance_id = value;
-    }
+    // No custom setters required
     
     // ***************** //
     // * Class Methods * //
@@ -93,8 +74,9 @@ class ActivityCategory extends BaseModel {
         const activityCategory = await ActivityCategory.get({
             nameOrSymbol: true,
             name: this.name,
-            symbol: this.symbol
-        }, true);
+            symbol: this.symbol,
+            unique: true
+        });
         
         // Check if this is a duplicate activity category
         if (activityCategory) {
@@ -113,7 +95,7 @@ class ActivityCategory extends BaseModel {
     }
     
     async delete() {
-        const Activity = require(`${ROOT}/modules/event/Activity`);
+        const Activity = require(`${ROOT}/modules/data/Activity`);
         const activities = await Activity.get({activityCategoryId: this.id});
         
         if (activities.length > 0) {
@@ -129,7 +111,7 @@ class ActivityCategory extends BaseModel {
     // ************************************************************ //
     
     async getActivities() {
-        const Activity = require(`${ROOT}/modules/event/Activity`);
+        const Activity = require(`${ROOT}/modules/data/Activity`);
         return await Activity.get({activityCategoryId: this.id});
     }
 }

@@ -3,10 +3,10 @@
 const ROOT = '../..';
 
 // Load our classes
-const Alliance         = require(`${ROOT}/modules/alliance/Alliance`);
-const Activity         = require(`${ROOT}/modules/event/Activity`);
-const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
-const Event            = require(`${ROOT}/modules/event/Event`);
+const Alliance         = require(`${ROOT}/modules/data/Alliance`);
+const Activity         = require(`${ROOT}/modules/data/Activity`);
+const ActivityCategory = require(`${ROOT}/modules/data/ActivityCategory`);
+const Event            = require(`${ROOT}/modules/data/Event`);
 const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
@@ -114,7 +114,7 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
             if (error instanceof DuplicateError) {
                 await client.replyWithError(error.message, message);
             } else {
-                await client.replyWithErrorAndDM(`Creation of event failed: ${context.event.name}`, message, error);
+                await client.replyWithErrorAndDM(`Creation of event failed`, message, error);
             }
         }
     });

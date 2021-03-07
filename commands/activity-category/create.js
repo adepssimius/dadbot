@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+const ActivityCategory = require(`${ROOT}/modules/data/ActivityCategory`);
 const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
@@ -27,6 +27,10 @@ const help = {
     maxArgs: null
 };
 exports.help = help;
+
+//
+// TODO - Update this for optionally choosing between creating a global or alliance visible category
+//
 
 const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
     if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
@@ -59,6 +63,7 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     const activityCategory = new ActivityCategory({
         name: name,
         symbol: symbol,
+        allianceId: null,
         creatorId: message.author.id
     });
     

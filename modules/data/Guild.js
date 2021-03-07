@@ -8,73 +8,39 @@ const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
-const knex   = require(`${ROOT}/modules/Database`);
 
 class Guild extends BaseModel {
-    static tableName = 'guild';
-    static orderBy   = 'created_at';
-    static fields    = ['id', 'alliance_id', 'clan_name', 'clan_short_name', 'clan_bungie_num', 'timezone', 'creator_id'];
-    static fieldMap  = BaseModel.getFieldMap(Guild.fields);
+    static schema = this.parseSchema({
+        tableName: 'guild',
+        orderBy: 'created_at',
+        fields: [
+            { dbFieldName: 'id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true },
+            { dbFieldName: 'clan_name', type: 'string', length: 32, nullable: true },
+            { dbFieldName: 'clan_short_name', type: 'string', length: 32, nullable: true },
+            { dbFieldName: 'clan_bungie_num', type: 'integer', nullable: true },
+            { dbFieldName: 'timezone', type: 'string', length: 32, nullable: true },
+            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
+        ]
+    });
     
     constructor(data) {
-        super(Guild, data);
+        super(data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
     
-    get tableName() {
-        return Guild.tableName;
-    }
-    
-    get allianceId() {
-        return this.data.alliance_id;
-    }
-    
-    get clanName() {
-        return this.data.clan_name;
-    }
-    
-    get clanShortName() {
-        return this.data.clan_short_name;
-    }
-    
-    get clanBungieNum() {
-        return this.data.clan_bungie_num;
-    }
-    
-    get timezone() {
-        return this.data.timezone;
-    }
+    //get tableName() {
+    //    return Guild.tableName;
+    //}
     
     // *********** //
     // * Setters * //
     // *********** //
     
-    set allianceId(value) {
-        this.data.alliance_id = value;
-    }
-    
-    set clanName(value) {
-        this.data.clan_name = value;
-    }
-    
-    set clanShortName(value) {
-        if (value == null) {
-            this.data.clan_short_name = null;
-        } else {
-            this.data.clan_short_name = value.toUpperCase();
-        }
-    }
-    
-    set clanBungieNum(value) {
-        this.data.clan_bungie_num = value;
-    }
-    
-    set timezone(value) {
-        this.data.timezone = value;
-    }
+    // No custom setters required
     
     // ***************** //
     // * Class Methods * //
@@ -104,10 +70,10 @@ class Guild extends BaseModel {
     // ******************** //
     
     async create() {
-        const guilds = await Guild.get({'id': this.id});
+        const guild = await Guild.get({'id': this.id, unique: true});
         
         // Check if this is a duplicate alliance
-        if (guilds.length > 0) {
+        if (guild) {
             throw new DuplicateError(`Guild already exists`);
         }
         
@@ -116,9 +82,9 @@ class Guild extends BaseModel {
     }
     
     async getTitle() {
-        const suffix = (this.clanShortName != null ? ` [${this.clanShortName}]` : '');
+        const suffix = ( this.clanShortName ? ` [${this.clanShortName}]` : '' );
         
-        if (this.clanName != null) {
+        if (this.clanName) {
             return this.clanName + suffix;
         } else {
             const discordGuild = await client.guilds.fetch(this.id);
@@ -127,7 +93,7 @@ class Guild extends BaseModel {
     }
     
     getClanURL() {
-        if (this.clanBungieNum == null) {
+        if (!this.clanBungieNum) {
             return null;
         }
         

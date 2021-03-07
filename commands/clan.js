@@ -8,7 +8,7 @@ const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unus
 const conf = {
     enabled: true,
     guildOnly: false,
-    aliases: ['all'],
+    aliases: [],
     permLevel: 'viewer'
 };
 exports.conf = conf;

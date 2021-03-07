@@ -6,7 +6,7 @@ const ROOT = '../..';
 const BaseModel      = require(`${ROOT}/modules/BaseModel`);
 const EmojiMap       = require(`${ROOT}/modules/EmojiMap`);
 const Snowflake      = require(`${ROOT}/modules/Snowflake`);
-const Guardian       = require(`${ROOT}/modules/alliance/Guardian`);
+const Guardian       = require(`${ROOT}/modules/data/Guardian`);
 const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load external classes
@@ -16,42 +16,28 @@ const Discord = require('discord.js');
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 class Activity extends BaseModel {
-    static tableName = 'activity';
-    static orderBy   = 'name';
-    static fields    = ['id', 'name', 'activity_category_id', 'fireteam_size', 'est_max_duration', 'alliance_id', 'creator_id'];
-    static fieldMap  = BaseModel.getFieldMap(Activity.fields);
+    static schema = this.parseSchema({
+        tableName: 'activity',
+        orderBy: 'name',
+        fields: [
+            { dbFieldName: 'id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'name', type: 'string', length: 32, nullable: false },
+            { dbFieldName: 'short_name', type: 'string', length: 16, nullable: false },
+            { dbFieldName: 'activity_category_id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true },
+            { dbFieldName: 'est_max_duration', type: 'integer', nullable: false },
+            { dbFieldName: 'fireteam_size', type: 'integer', nullable: false },
+            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
+        ]
+    });
     
     constructor(data) {
-        super(Activity, data);
+        super(data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
-    
-    get tableName() {
-        return Activity.tableName;
-    }
-    
-    get name() {
-        return this.data.name;
-    }
-    
-    get activityCategoryId() {
-        return this.data.activity_category_id;
-    }
-    
-    get fireteamSize() {
-        return this.data.fireteam_size;
-    }
-    
-    get estMaxDuration() {
-        return this.data.est_max_duration;
-    }
-    
-    get allianceId() {
-        return this.data.alliance_id;
-    }
     
     get title() {
         return `${this.name}`;
@@ -61,25 +47,7 @@ class Activity extends BaseModel {
     // * Setters * //
     // *********** //
     
-    set name(value) {
-        this.data.name = value;
-    }
-    
-    set activityCategoryId(value) {
-        this.data.activity_category_id = value;
-    }
-    
-    set fireteamSize(value) {
-        this.data.fireteam_size = value;
-    }
-    
-    set estMaxDuration(value) {
-        this.data.est_max_duration = value;
-    }
-    
-    set allianceId(value) {
-        this.data.alliance_id = value;
-    }
+    // No custom setters required
     
     // ***************** //
     // * Class Methods * //
@@ -87,29 +55,29 @@ class Activity extends BaseModel {
     
     static parseConditions(conditions) {
         if (conditions.nameOrAlias) {
-            const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
+            const ActivityAlias = require(`${ROOT}/modules/data/ActivityAlias`);
             return (query) => {
                 query.where('name', conditions.name)
                     .orWhereIn('id', function() {
-                        this.select('activity_id').from(ActivityAlias.tableName).where('alias', conditions.alias.toUpperCase());
+                        this.select('activity_id').from(ActivityAlias.schema.tableName).where('alias', conditions.alias.toUpperCase());
                     });
             };
         }
         
         if (conditions.alias) {
-            const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
+            const ActivityAlias = require(`${ROOT}/modules/data/ActivityAlias`);
             return (query) => {
                 query.whereIn('id', function() {
-                    this.select('activity_id').from(ActivityAlias.tableName).where('alias', conditions.alias.toUpperCase());
+                    this.select('activity_id').from(ActivityAlias.schema.tableName).where('alias', conditions.alias.toUpperCase());
                 });
             };
         }
         
         if (conditions.categoryNameOrSymbol) {
-            const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+            const ActivityCategory = require(`${ROOT}/modules/data/ActivityCategory`);
             return (query) => {
                 query.whereIn('activity_category_id', function() {
-                    this.select('id').from(ActivityCategory.tableName)
+                    this.select('id').from(ActivityCategory.schema.tableName)
                         .where('name', conditions.name)
                         .orWhere('symbol', conditions.symbol.toUpperCase());
                 });
@@ -141,7 +109,7 @@ class Activity extends BaseModel {
     }
     
     async delete() {
-        const ActivityAlias   = require(`${ROOT}/modules/event/ActivityAlias`);
+        const ActivityAlias   = require(`${ROOT}/modules/data/ActivityAlias`);
         const activityAliases = await ActivityAlias.get({activityId: this.id});
         
         for (let x = 0; x < activityAliases.length; x++) {
@@ -180,20 +148,8 @@ class Activity extends BaseModel {
     // * Instance Methods - Helper methods to get related objects * //
     // ************************************************************ //
     
-    async getActivityCategory() {
-        const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
-        const activityCategory = await ActivityCategory.get({id: this.activityCategoryId, unique: true});
-        
-        if (!activityCategory) {
-            throw new Error(`Unexpectedly did not find an activity category for activity_category_id = '${this.activityCategoryId}'`);
-        }
-        
-        return activityCategory;
-    }
-    
-    // * 
     async getActivityAliases() {
-        const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
+        const ActivityAlias = require(`${ROOT}/modules/data/ActivityAlias`);
         return await ActivityAlias.get({activityId: this.id});
     }
     
@@ -229,12 +185,27 @@ class Activity extends BaseModel {
             }
         });
         
+        // Activity Name: varchar(32)
+        properties.push({
+            name: 'Activity Short Name',
+            
+            prompt: async (message, nextMessage) => {
+                await message.channel.send( `What would you like to use for the short name of this activity? `
+                                          + `This should be less then 16 characters in length and will used to name event channels.`);
+            },
+            
+            collect: async (message, nextMessage) => {
+                context.activity.shortName = nextMessage.content;
+                if (context.create) properties.shift();
+            }
+        });
+        
         // Category: varchar(20) -> Category table
         properties.push({
             name: 'Category',
             
             prompt: async (message, nextMessage) => {
-                const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+                const ActivityCategory = require(`${ROOT}/modules/data/ActivityCategory`);
                 
                 const emojiMap = new Map();
                 let options = '';
@@ -289,12 +260,13 @@ class Activity extends BaseModel {
                 context.stopReacting = false;
                 context.propertyCollector.stop();
                 
-                const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+                const ActivityCategory = require(`${ROOT}/modules/data/ActivityCategory`);
                 const activityCategory = await ActivityCategory.get({
                     nameOrSymbol: true,
                     name: nextMessage.content,
-                    symbol: nextMessage.content
-                }, true);
+                    symbol: nextMessage.content,
+                    unique: true
+                });
                 
                 if (!activityCategory) {
                     await message.channel.send(`Activity category not found: ${nextMessage.content}`);

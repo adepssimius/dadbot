@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const Guild     = require(`${ROOT}/modules/alliance/Guild`);
+const Guild     = require(`${ROOT}/modules/data/Guild`);
 const Timestamp = require(`${ROOT}/modules/Timestamp`);
 
 // Load external classes

@@ -5,37 +5,31 @@ const ROOT = '../..';
 // Load our classes
 const BaseModel      = require(`${ROOT}/modules/BaseModel`);
 const Snowflake      = require(`${ROOT}/modules/Snowflake`);
-const Guardian       = require(`${ROOT}/modules/alliance/Guardian`);
+const Guardian       = require(`${ROOT}/modules/data/Guardian`);
 const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 class Alliance extends BaseModel {
-    static tableName = 'alliance';
-    static orderBy   = 'name';
-    static fields    = ['id', 'name', 'short_name', 'creator_id'];
-    static fieldMap  = BaseModel.getFieldMap(Alliance.fields);
+    static schema = this.parseSchema({
+        tableName: 'alliance',
+        orderBy: 'name',
+        fields: [
+            { dbFieldName: 'id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'name', type: 'string', length: 32, nullable: false },
+            { dbFieldName: 'short_name', type: 'string', length: 4, nullable: false },
+            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
+        ]
+    });
     
     constructor(data) {
-        super(Alliance, data);
+        super(data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
-    
-    get tableName() {
-        return Alliance.tableName;
-    }
-    
-    get name() {
-        return this.data.name;
-    }
-    
-    get shortName() {
-        return this.data.short_name;
-    }
     
     get title() {
         return `${this.name} [${this.shortName}]`;
@@ -45,17 +39,7 @@ class Alliance extends BaseModel {
     // * Setters * //
     // *********** //
     
-    set name(value) {
-        this.data.name = value;
-    }
-    
-    set shortName(value) {
-        if (value == null) {
-            this.data.short_name = null;
-        } else {
-            this.data.short_name = value.toUpperCase();
-        }
-    }
+    // No custom setters required
     
     // ***************** //
     // * Class Methods * //
@@ -72,10 +56,10 @@ class Alliance extends BaseModel {
         
         // Check for a guild id search
         if (conditions.guildId) {
-            const Guild = require(`${ROOT}/modules/alliance/Guild`);
+            const Guild = require(`${ROOT}/modules/data/Guild`);
             return (query) => {
                 query.whereIn('id', function() {
-                    this.select('alliance_id').from(Guild.tableName).where('id', conditions.guildId);
+                    this.select('alliance_id').from(Guild.schema.tableName).where('id', conditions.guildId);
                 });
             };
         }
@@ -98,8 +82,9 @@ class Alliance extends BaseModel {
         const alliance = await Alliance.get({
             nameOrShortName: true,
             name: this.name,
-            shortName: this.shortName
-        }, true);
+            shortName: this.shortName,
+            unique: true
+        });
         
         // Check if this is a duplicate alliance
         if (alliance) {

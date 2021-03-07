@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const Activity = require(`${ROOT}/modules/event/Activity`);
+const Activity = require(`${ROOT}/modules/data/Activity`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars

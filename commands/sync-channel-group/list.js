@@ -3,9 +3,9 @@
 const ROOT = '../..';
 
 // Load our classes
-const Alliance         = require(`${ROOT}/modules/alliance/Alliance`);
-const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
-const SyncChannel      = require(`${ROOT}/modules/sync/SyncChannel`);
+const Alliance         = require(`${ROOT}/modules/data/Alliance`);
+const ChannelGroup = require(`${ROOT}/modules/data/ChannelGroup`);
+const Channel      = require(`${ROOT}/modules/data/Channel`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -40,22 +40,22 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     }
     
     // Get the channel synchronization groups for this alliance
-    const syncChannelGroups = await SyncChannelGroup.get({allianceId: alliance.id});
+    const channelGroups = await ChannelGroup.get({allianceId: alliance.id});
     
-    let response = `Found ${syncChannelGroups.length} channel synchronization group`;
-    if (syncChannelGroups.length != 1) {
+    let response = `Found ${channelGroups.length} channel synchronization group`;
+    if (channelGroups.length != 1) {
         response += 's';
     }
     
-    const syncChannelGroupNames = [];
-    for (let x = 0; x < syncChannelGroups.length; x++) {
-        const syncChannelGroup = syncChannelGroups[x];
-        const syncChannels = await SyncChannel.get({'channelGroupId': syncChannelGroup.id});
-        syncChannelGroupNames.push(`${syncChannelGroup.name} (${syncChannels.length} channel${syncChannels.length != 1 ? 's' : ''})`);
+    const channelGroupNames = [];
+    for (let x = 0; x < channelGroups.length; x++) {
+        const channelGroup = channelGroups[x];
+        const channels = await Channel.get({'channelGroupId': channelGroup.id});
+        channelGroupNames.push(`${channelGroup.name} (${channels.length} channel${channels.length != 1 ? 's' : ''})`);
     }
     
-    if (syncChannelGroups.length > 0) {
-        response += '\n```' + syncChannelGroupNames.join('\n') + '```';
+    if (channelGroups.length > 0) {
+        response += '\n```' + channelGroupNames.join('\n') + '```';
     }
     
     message.channel.send(response);

@@ -3,8 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const Alliance         = require(`${ROOT}/modules/alliance/Alliance`);
-const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
+const Alliance         = require(`${ROOT}/modules/data/Alliance`);
+const ChannelGroup = require(`${ROOT}/modules/data/ChannelGroup`);
 const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
@@ -43,14 +43,14 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     const name = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
     
     // Create the channel synchronization group object
-    const syncChannelGroup = await new SyncChannelGroup({name: name, allianceId: alliance.id});
+    const channelGroup = await new ChannelGroup({name: name, allianceId: alliance.id});
     
     try {
-        await syncChannelGroup.create();
+        await channelGroup.create();
         message.channel.send(`Created channel synchronization group: ${name}`);
         
         client.logger.debug('Channel Synchronization Group:');
-        client.logger.dump(syncChannelGroup);
+        client.logger.dump(channelGroup);
     } catch (error) {
         if (error instanceof DuplicateError) {
             message.channel.send(error.message);

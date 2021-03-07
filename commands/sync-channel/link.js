@@ -3,9 +3,9 @@
 const ROOT = '../..';
 
 // Load our classes
-const Alliance         = require(`${ROOT}/modules/alliance/Alliance`);
-const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
-const SyncChannel      = require(`${ROOT}/modules/sync/SyncChannel`);
+const Alliance         = require(`${ROOT}/modules/data/Alliance`);
+const ChannelGroup = require(`${ROOT}/modules/data/ChannelGroup`);
+const Channel      = require(`${ROOT}/modules/data/Channel`);
 const DuplicateError   = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
@@ -47,34 +47,34 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     
     // Attempt to retrieve the specified channel synchronization group
     const name = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
-    const syncChannelGroup = await SyncChannelGroup.get({name: name, allianceId: alliance.id, unique: true});
+    const channelGroup = await ChannelGroup.get({name: name, allianceId: alliance.id, unique: true});
     
-    if (syncChannelGroup == null) {
+    if (channelGroup == null) {
         message.channel.send(`Could not find channel synchronization group: ${name}`);
         return;
     }
     
     // Create the synchronization channel object
-    const syncChannel = new SyncChannel({
+    const channel = new Channel({
         id: message.channel.id,
         guildId: message.guild.id,
-        channelGroupId: syncChannelGroup.id,
+        channelGroupId: channelGroup.id,
         allianceId: alliance.id,
         channel: message.channel
     });
     
     try {
-        await syncChannel.create();
-        message.channel.send(`Channel linked to synchronization group: ${syncChannelGroup.name}`);
+        await channel.create();
+        message.channel.send(`Channel linked to synchronization group: ${channelGroup.name}`);
         
         client.logger.debug('Sync Channel:');
-        client.logger.dump(syncChannel);
+        client.logger.dump(channel);
     } catch (error) {
         if (error instanceof DuplicateError) {
             message.channel.send(error.message);
             return;
         } else {
-            client.replyWithErrorAndDM(`Linking channel to synchronization group failed: ${syncChannelGroup.name}`, message, error);
+            client.replyWithErrorAndDM(`Linking channel to synchronization group failed: ${channelGroup.name}`, message, error);
         }
     }
 };

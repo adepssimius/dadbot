@@ -3,9 +3,9 @@
 const ROOT = '../..';
 
 // Load our classes
-const Alliance         = require(`${ROOT}/modules/alliance/Alliance`);
-const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
-const SyncChannel      = require(`${ROOT}/modules/sync/SyncChannel`);
+const Alliance         = require(`${ROOT}/modules/data/Alliance`);
+const ChannelGroup = require(`${ROOT}/modules/data/ChannelGroup`);
+const Channel      = require(`${ROOT}/modules/data/Channel`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -40,28 +40,28 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     }
     
     const name = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
-    const syncChannelGroup = await SyncChannelGroup.get({name: name, allianceId: alliance.id, unique: true});
+    const channelGroup = await ChannelGroup.get({name: name, allianceId: alliance.id, unique: true});
     
-    if (syncChannelGroup == null) {
+    if (channelGroup == null) {
         message.channel.send(`Could not find channel synchronization group in this alliance: ${name}`);
         return;
     }
     
-    const syncChannels = await SyncChannel.get({'channelGroupId': syncChannelGroup.id});
-    let responseContent = `Channel synchronization group '${syncChannelGroup.name}' found with ${syncChannels.length} channel`;
+    const channels = await Channel.get({'channelGroupId': channelGroup.id});
+    let responseContent = `Channel synchronization group '${channelGroup.name}' found with ${channels.length} channel`;
     
-    if (syncChannels.length != 1) {
+    if (channels.length != 1) {
         responseContent += 's';
     }
 
-    if (syncChannels.length > 0) {
+    if (channels.length > 0) {
         responseContent += '\n';
     }
     
-    for (let x = 0; x < syncChannels.length; x++) {
-        const syncChannel = syncChannels[x];
-        const channel = await syncChannel.getDiscordChannel();
-        responseContent += `\n    <#${channel.id}> (${channel.guild.name})`;
+    for (let x = 0; x < channels.length; x++) {
+        const channel = channels[x];
+        const discordChannel = await channel.getDiscordChannel();
+        responseContent += `\n    <#${discordChannel.id}> (${discordChannel.guild.name})`;
     }
     message.channel.send(responseContent);
 };

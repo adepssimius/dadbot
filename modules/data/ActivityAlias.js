@@ -5,41 +5,32 @@ const ROOT = '../..';
 // Load our classes
 const BaseModel      = require(`${ROOT}/modules/BaseModel`);
 const Snowflake      = require(`${ROOT}/modules/Snowflake`);
-const Guardian       = require(`${ROOT}/modules/alliance/Guardian`);
+const Guardian       = require(`${ROOT}/modules/data/Guardian`);
 const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 class ActivityAlias extends BaseModel {
-    static tableName = 'activity_alias';
-    static orderBy   = 'alias';
-    static fields    = ['id', 'alias', 'activity_id', 'alliance_id', 'creator_id'];
-    static fieldMap  = BaseModel.getFieldMap(ActivityAlias.fields);
+    static schema = this.parseSchema({
+        tableName: 'activity_alias',
+        orderBy: 'alias',
+        fields: [
+            { dbFieldName: 'id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'alias', type: 'unknown', length: 32, nullable: true },
+            { dbFieldName: 'activity_id', type: 'string', length: 1, nullable: false },
+            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true },
+            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
+        ]
+    });
     
     constructor(data = {}) {
-        super(ActivityAlias, data);
+        super(data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
-    
-    get tableName() {
-        return ActivityAlias.tableName;
-    }
-    
-    get alias() {
-        return this.data.alias;
-    }
-    
-    get activityId() {
-        return this.data.activity_id;
-    }
-    
-    get allianceId() {
-        return this.data.alliance_id;
-    }
     
     get title() {
         return `${this.alias}`;
@@ -49,17 +40,7 @@ class ActivityAlias extends BaseModel {
     // * Setters * //
     // *********** //
     
-    set alias(value) {
-        this.data.alias = value.toUpperCase();
-    }
-    
-    set activityId(value) {
-        this.data.activity_id = value;
-    }
-    
-    set allianceId(value) {
-        this.data.alliance_id = value;
-    }
+    // No custom setters required
     
     // ***************** //
     // * Class Methods * //
@@ -89,9 +70,9 @@ class ActivityAlias extends BaseModel {
     // ******************** //
     
     async create() {
-        const Activity      = require(`${ROOT}/modules/event/Activity`);
+        const Activity      = require(`${ROOT}/modules/data/Activity`);
         const activityAlias = await ActivityAlias.get({alias: this.alias, unique: true});
-        const activity      = await Activity.get({alias: this.alias}, true);
+        const activity      = await Activity.get({alias: this.alias, unique: true});
         
         if (activityAlias) {
             throw new DuplicateError(`Alias is already used by another activity: ${activity.name} [${activityAlias.alias}]`);
@@ -106,21 +87,6 @@ class ActivityAlias extends BaseModel {
         // Generate the id and attempt to insert the record into the database
         this.id = Snowflake.generate();
         await BaseModel.prototype.create.call(this);
-    }
-    
-    // ************************************************************ //
-    // * Instance Methods - Helper methods to get related objects * //
-    // ************************************************************ //
-    
-    async getActivity() {
-        const Activity = require(`${ROOT}/modules/event/Activity`);
-        const activity = await Activity.get({id: this.activityId, unique: true});
-        
-        if (!activity) {
-            throw new Error(`Unexpectedly did not find activity with alias = '${this.alias}'`);
-        }
-        
-        return activity;
     }
 }
 

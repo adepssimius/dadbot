@@ -3,8 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const Activity         = require(`${ROOT}/modules/event/Activity`);
-const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+const Activity         = require(`${ROOT}/modules/data/Activity`);
+const ActivityCategory = require(`${ROOT}/modules/data/ActivityCategory`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -35,8 +35,9 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     let activityCategory = await ActivityCategory.get({
         nameOrSymbol: true,
         name: value,
-        symbol: value
-    }, true);
+        symbol: value,
+        unique: true
+    });
     
     if (!activityCategory) {
         message.channel.send(`Could not find activity category: '${value}'`);

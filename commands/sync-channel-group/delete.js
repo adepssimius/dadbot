@@ -3,8 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const Alliance         = require(`${ROOT}/modules/alliance/Alliance`);
-const SyncChannelGroup = require(`${ROOT}/modules/sync/SyncChannelGroup`);
+const Alliance         = require(`${ROOT}/modules/data/Alliance`);
+const ChannelGroup = require(`${ROOT}/modules/data/ChannelGroup`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -40,15 +40,15 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     
     // Grab the name
     const name = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
-    const syncChannelGroup = await SyncChannelGroup.get({name: name, allianceId: alliance.id, unique: true});
+    const channelGroup = await ChannelGroup.get({name: name, allianceId: alliance.id, unique: true});
     
-    if (syncChannelGroup == null) {
+    if (channelGroup == null) {
         message.channel.send(`Could not find a channel synchronization group named '${name}'`);
         return;
     }
     
     try {
-        await syncChannelGroup.delete();
+        await channelGroup.delete();
         message.channel.send(`Channel synchronization group deleted`);
     } catch (error) {
         client.replyWithErrorAndDM(`Deletion of channel synchronization group failed: ${name}`, message, error);

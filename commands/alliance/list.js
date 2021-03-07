@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const Alliance = require(`${ROOT}/modules/alliance/Alliance`);
+const Alliance = require(`${ROOT}/modules/data/Alliance`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars

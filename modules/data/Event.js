@@ -7,7 +7,7 @@ const BaseModel = require(`${ROOT}/modules/BaseModel`);
 const EmojiMap  = require(`${ROOT}/modules/EmojiMap`);
 const Snowflake = require(`${ROOT}/modules/Snowflake`);
 const Timestamp = require(`${ROOT}/modules/Timestamp`);
-const Guardian  = require(`${ROOT}/modules/alliance/Guardian`);
+const Guardian  = require(`${ROOT}/modules/data/Guardian`);
 
 // Load external classes
 const Discord = require('discord.js');
@@ -16,189 +16,43 @@ const Discord = require('discord.js');
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
 class Event extends BaseModel {
-    static tableName = 'event';
-    static orderBy   = 'start_time';
-    static fields    = [ 'id'
-                       , 'activity_id'
-                       , 'activity_category_id'
-                       , 'alliance_id'
-                       , 'guild_id'
-                       , 'channel_name'
-                       , 'platform'
-                       , 'description'
-                       , 'start_time'
-                       , 'fireteam_size'
-                       , 'est_max_duration'
-                       , 'is_private'
-                       , 'auto_delete'
-                       , 'creator_id'
-                       , 'owner_id' ];
-    
-    static fieldMap  = BaseModel.getFieldMap(Event.fields);
+    static schema = this.parseSchema({
+        tableName: 'event',
+        orderBy: 'start_time',
+        fields: [
+            { dbFieldName: 'id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'activity_id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'activity_category_id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'guild_id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true },
+            { dbFieldName: 'channel_name', type: 'string', length: 32, nullable: false },
+            { dbFieldName: 'description', type: 'string', length: 256, nullable: true },
+            { dbFieldName: 'platform', type: 'string', length: 16, nullable: false },
+            { dbFieldName: 'start_time', type: 'datetime', nullable: false },
+            { dbFieldName: 'est_max_duration', type: 'integer', nullable: false },
+            { dbFieldName: 'fireteam_size', type: 'integer', nullable: false },
+            { dbFieldName: 'is_private', type: 'boolean', nullable: false },
+            { dbFieldName: 'auto_delete', type: 'boolean', nullable: false },
+            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'owner_id', type: 'snowflake', nullable: false }
+        ]
+    });
     
     constructor(data) {
-        super(Event, data);
+        super(data);
     }
     
     // *********** //
     // * Getters * //
     // *********** //
     
-    get tableName() {
-        return Event.tableName;
-    }
-    
-    get activityId() {
-        return this.data.activity_id;
-    }
-    
-    get activityCategoryId() {
-        return this.data.activity_category_id;
-    }
-    
-    get allianceId() {
-        return this.data.alliance_id;
-    }
-    
-    get guildId() {
-        return this.data.guild_id;
-    }
-    
-    get channelName() {
-        return this.data.channel_name;
-    }
-    
-    get platform() {
-        return this.data.platform;
-    }
-    
-    get description() {
-        return this.data.description;
-    }
-    
-    get startTime() {
-        return this.data.start_time;
-    }
-    
-    get fireteamSize() {
-        return this.data.fireteam_size;
-    }
-    
-    get estMaxDuration() {
-        return this.data.est_max_duration;
-    }
-    
-    get isPrivate() {
-        return this.data.is_private;
-    }
-    
-    get autoDelete() {
-        return this.data.auto_delete;
-    }
-    
-    get ownerId() {
-        return this.data.owner_id;
-    }
-    
-    get activity() {
-        return this.temp.activity;
-    }
-    
-    get activityCategory() {
-        return this.temp.activityCategory;
-    }
-    
     get ts() {
         return this.temp.ts;
-    }
-    
-    get owner() {
-        return this.temp.owner;
     }
     
     // *********** //
     // * Setters * //
     // *********** //
-    
-    set activityId(value) {
-        this.data.activity_id = value;
-    }
-    
-    set activity(activity) {
-        this.temp.activity = activity;
-        
-        if (activity) {
-            this.activityId         = activity.id;
-            this.activityCategoryId = activity.activityCategoryId;
-            
-            if (this.fireteamSize   == null) this.fireteamSize   = activity.fireteamSize;
-            if (this.estMaxDuration == null) this.estMaxDuration = activity.estMaxDuration;
-        }
-    }
-    
-    set activityCategoryId(value) {
-        this.data.activity_category_id = value;
-    }
-    
-    set activityCategory(activityCategory) {
-        this.temp.activityCategory = activityCategory;
-        
-        if (activityCategory) {
-            this.activityCategoryId = activityCategory.id;
-        }
-    }
-    
-    set allianceId(value) {
-        this.data.alliance_id = value;
-    }
-    
-    set guildId(value) {
-        this.data.guild_id = value;
-    }
-    
-    set channelName(value) {
-        this.data.channel_name = value;
-    }
-    
-    set platform(value) {
-        this.data.platform = value;
-    }
-    
-    set description(value) {
-        this.data.description = value;
-    }
-    
-    set startTime(value) {
-        this.data.start_time = value;
-    }
-    
-    set fireteamSize(value) {
-        this.data.fireteam_size = value;
-    }
-    
-    set estMaxDuration(value) {
-        this.data.est_max_duration = value;
-    }
-    
-    set isPrivate(value) {
-        this.data.is_private = value;
-    }
-    
-    set autoDelete(value) {
-        this.data.auto_delete = value;
-    }
-    
-    set ownerId(value) {
-        this.data.owner_id = value;
-    }
-    
-    set owner(owner) {
-        this.temp.owner = owner;
-        
-        if (owner) {
-            this.ownerId = owner.id;
-        }
-    }
     
     set ts(value) {
         this.temp.ts = value;
@@ -208,9 +62,9 @@ class Event extends BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    static parseConditions(conditions) {
-        return conditions;
-    }
+    //static parseConditions(conditions) {
+    //    return conditions;
+    //}
     
     // ******************** //
     // * Instance Methods * //
@@ -275,13 +129,11 @@ class Event extends BaseModel {
     }
     
     async deriveChannelName() {
-        const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
-        const activityAliases = await ActivityAlias.get({activityId: this.activityId});
-        const alias = activityAliases[0].alias;
+        const activity = this.getActivity();
         const tsParts = this.ts.formatToParts();
         
-        client.logger.debug('Activity Aliases:');
-        client.logger.dump(activityAliases);
+        client.logger.debug('activity Aliases:');
+        client.logger.dump(activity);
         
         client.logger.debug('Timestamp Parts:');
         client.logger.dump(tsParts);
@@ -291,14 +143,14 @@ class Event extends BaseModel {
         const minute       = tsParts.find(element => element.type == 'minute').value;
         const dayPeriod    = tsParts.find(element => element.type == 'dayPeriod').value;
         const timeZoneName = tsParts.find(element => element.type == 'timeZoneName').value;
-        const channelName  = `${alias}-${weekday}-${hour}${minute == 0 ? '' : minute}${dayPeriod}-${timeZoneName}`;
+        const channelName  = `${activity.shortName}-${weekday}-${hour}${minute == 0 ? '' : minute}${dayPeriod}-${timeZoneName}`;
         
         return channelName.toLowerCase();
     }
     
     async deriveChannelTopic() {
         const startTs  = new Timestamp(this.startTime);
-        const Activity = require(`${ROOT}/modules/event/Activity`);
+        const Activity = require(`${ROOT}/modules/data/Activity`);
         const activity = await this.getActivity();
         
         return `${activity.name} @ ${startTs.convert()}`;
@@ -310,7 +162,7 @@ class Event extends BaseModel {
     
     async setupEventChannels(message) {
         const eventMessageContent = await this.toMessageContent();
-        const EventChannel = require(`${ROOT}/modules/event/EventChannel`);
+        const EventChannel = require(`${ROOT}/modules/data/EventChannel`);
         let   eventChannel = await EventChannel.get({eventId: this.id, guildId: this.guildId, unique: true});
         
         if (eventChannel) {
@@ -342,72 +194,9 @@ class Event extends BaseModel {
     // * Instance Methods - Helper methods to get related objects * //
     // ************************************************************ //
     
-    async getActivity() {
-        const Activity = require(`${ROOT}/modules/event/Activity`);
-        const activity = await Activity.get({id: this.activityId, unique: true});
-        
-        if (!activity) {
-            throw new Error(`Unexpectedly did not find an activity for activity_id = '${this.activityId}'`);
-        }
-        
-        return activity;
-    }
-    
-    async getActivityCategory() {
-        const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
-        const activityCategory = await ActivityCategory.get({id: this.activityCategoryId, unique: true});
-        
-        if (!activityCategory) {
-            throw new Error(`Unexpectedly did not find an activity category for id = '${this.activityId}'`);
-        }
-        
-        return activityCategory;
-    }
-    
     async getActivityAliases() {
-        const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
+        const ActivityAlias = require(`${ROOT}/modules/data/ActivityAlias`);
         return await ActivityAlias.get({activityId: this.activityId});
-    }
-    
-    async getAlliance() {
-        const Alliance = require(`${ROOT}/modules/alliance/Alliance`);
-        const alliance = await Alliance.get({id: this.allianceId, unique: true});
-        
-        if (!alliance) {
-            throw new Error(`Unexpectedly did not find an alliance for id = '${this.allianceId}'`);
-        }
-        
-        return alliance;
-    }
-    
-    async getGuild() {
-        const Guild = require(`${ROOT}/modules/alliance/Guild`);
-        const guild = await Guild.get({id: this.guildId, unique: true});
-        
-        if (!guild) {
-            throw new Error(`Unexpectedly did not find an guild for id = '${this.guildId}'`);
-        }
-        
-        return guild;
-    }
-    
-    async getOwner() {
-        if (this.owner) {
-            return this.owner;
-        }
-        
-        if (this.creatorId == this.ownerId && this.creator) {
-            return this.creator;
-        }
-        
-        const Guardian = require(`${ROOT}/modules/alliance/Guardian`);
-        const guardian = await Guardian.get({id: this.ownerId, unique: true});
-        
-        if (!guardian) {
-            throw new Error(`Unexpectedly did not find a guardian for id = '${this.ownerId}'`);
-        }
-        
-        return guardian;
     }
     
     // ***************************************** //
@@ -422,7 +211,7 @@ class Event extends BaseModel {
             name: 'Category',
             
             prompt: async (message, nextMessage) => {
-                const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+                const ActivityCategory = require(`${ROOT}/modules/data/ActivityCategory`);
                 const activityCategories = await ActivityCategory.get();
                 
                 // Build the options
@@ -494,8 +283,8 @@ class Event extends BaseModel {
                 context.stopReacting = false;
                 context.propertyCollector.stop();
                 
-                const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
-                const Activity         = require(`${ROOT}/modules/event/Activity`);
+                const ActivityCategory = require(`${ROOT}/modules/data/ActivityCategory`);
+                const Activity         = require(`${ROOT}/modules/data/Activity`);
                 let   activity;
                 
                 // First attempt to get it using the activity category name or symbol
@@ -541,7 +330,7 @@ class Event extends BaseModel {
             name: 'Activity',
             
             prompt: async (message, nextMessage) => {
-                const Activity = require(`${ROOT}/modules/event/Activity`);
+                const Activity = require(`${ROOT}/modules/data/Activity`);
                 const activities = await Activity.get({activityCategoryId: context.event.activityCategoryId});
                 
                 // Build the options
@@ -618,7 +407,7 @@ class Event extends BaseModel {
                 context.propertyCollector.stop();
                 
                 const emoji    = EmojiMap.get(nextMessage.content);
-                const Activity = require(`${ROOT}/modules/event/Activity`);
+                const Activity = require(`${ROOT}/modules/data/Activity`);
                 let   activity;
                 
                 if (emoji) {

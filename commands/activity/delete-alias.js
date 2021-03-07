@@ -3,8 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const Activity      = require(`${ROOT}/modules/event/Activity`);
-const ActivityAlias = require(`${ROOT}/modules/event/ActivityAlias`);
+const Activity      = require(`${ROOT}/modules/data/Activity`);
+const ActivityAlias = require(`${ROOT}/modules/data/ActivityAlias`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -42,7 +42,7 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     }
     
     // Get the activity
-    const activity = await Activity.get({alias: alias}, true);
+    const activity = await Activity.get({alias: alias, unique: true});
     
     // Attempt to delete the alias
     try {

@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const ActivityCategory = require(`${ROOT}/modules/event/ActivityCategory`);
+const ActivityCategory = require(`${ROOT}/modules/data/ActivityCategory`);
 
 // Load external classes
 const Discord = require('discord.js');
@@ -38,8 +38,9 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     let activityCategory = await ActivityCategory.get({
         nameOrSymbol: true,
         name: value,
-        symbol: value
-    }, true);
+        symbol: value,
+        unique: true
+    });
     
     if (!activityCategory) {
         message.channel.send(`Could not find activity category: '${value}'`);

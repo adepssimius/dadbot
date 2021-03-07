@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const Activity = require(`${ROOT}/modules/event/Activity`);
+const Activity = require(`${ROOT}/modules/data/Activity`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -34,8 +34,9 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     let activity = await Activity.get({
         nameOrAlias: true,
         name: value,
-        alias: value
-    }, true);
+        alias: value,
+        unique: true
+    });
     
     if (!activity) {
         message.channel.send(`Could not find activity: '${value}'`);

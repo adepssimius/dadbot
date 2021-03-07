@@ -16,7 +16,7 @@ class EventChannel extends BaseModel {
     static fieldMap  = BaseModel.getFieldMap(EventChannel.fields);
     
     constructor(data) {
-        super(EventChannel, data);
+        super(data);
     }
     
     // *********** //
@@ -102,7 +102,7 @@ class EventChannel extends BaseModel {
             return null;
         }
         
-        const Event = require(`${ROOT}/modules/event/Event`);
+        const Event = require(`${ROOT}/modules/data/Event`);
         const event = await Event.get({id: this.eventId, unique: true});
         
         if (!event) {

@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const Activity = require(`${ROOT}/modules/event/Activity`);
+const Activity = require(`${ROOT}/modules/data/Activity`);
 const EmojiMap = require(`${ROOT}/modules/EmojiMap`);
 
 // Load external classes

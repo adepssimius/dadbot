@@ -3,8 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const Activity       = require(`${ROOT}/modules/event/Activity`);
-const ActivityAlias  = require(`${ROOT}/modules/event/ActivityAlias`);
+const Activity       = require(`${ROOT}/modules/data/Activity`);
+const ActivityAlias  = require(`${ROOT}/modules/data/ActivityAlias`);
 const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
@@ -39,8 +39,9 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     let activity = await Activity.get({
         nameOrAlias: true,
         name: activitySearchString,
-        alias: activitySearchString
-    }, true);
+        alias: activitySearchString,
+        unique: true
+    });
     
     if (!activity) {
         message.channel.send(`Could not find activity: ${activitySearchString}`);

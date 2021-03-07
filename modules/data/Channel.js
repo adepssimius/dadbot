@@ -14,53 +14,36 @@ const http_post   = require(`${ROOT}/modules/Functions`).http_post;
 const http_patch  = require(`${ROOT}/modules/Functions`).http_patch;
 const http_delete = require(`${ROOT}/modules/Functions`).http_delete;
 
-class SyncChannel extends BaseModel {
-    static tableName = 'channel';
-    static orderBy   = 'created_at';
-    static fields    = ['id', 'guild_id', 'channel_group_id', 'alliance_id', 'webhook_id', 'webhook_url'];
-    static fieldMap  = BaseModel.getFieldMap(SyncChannel.fields);
+class Channel extends BaseModel {
+    static schema = this.parseSchema({
+        tableName: 'channel',
+        orderBy: 'created_at',
+        fields: [
+            { dbFieldName: 'id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'type', type: 'string', length: 16, nullable: false },
+            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'guild_id', type: 'snowflake', nullable: false },
+            { dbFieldName: 'channel_group_id', type: 'snowflake', nullable: true },
+            { dbFieldName: 'event_id', type: 'snowflake', nullable: true },
+            { dbFieldName: 'is_command_channel', type: 'boolean', nullable: false },
+            { dbFieldName: 'is_event_channel', type: 'boolean', nullable: false },
+            { dbFieldName: 'is_sync_channel', type: 'boolean', nullable: false },
+            { dbFieldName: 'command_channel_type', type: 'string', length: 16, nullable: true },
+            { dbFieldName: 'webhook_id', type: 'snowflake', nullable: true },
+            { dbFieldName: 'webhook_url', type: 'string', length: 256, nullable: true },
+        ],
+        objects: [
+            { objectName: 'channel' }
+        ]
+    });
     
     constructor(data) {
-        let channel;
-        
-        if (data.channel) {
-            channel = data.channel;
-            delete data.channel;
-        }
-        
-        super(SyncChannel, data);
-        this.channel = channel;
+        super(data);
 	}
-	
-	temp = {};
 	
     // *********** //
     // * Getters * //
     // *********** //
-    
-    get tableName() {
-        return SyncChannel.tableName;
-    }
-    
-    get guildId() {
-        return this.data.guild_id;
-    }
-    
-    get channelGroupId() {
-        return this.data.channel_group_id;
-    }
-    
-    get allianceId() {
-        return this.data.alliance_id;
-    }
-    
-    get webhookId() {
-        return this.data.webhook_id;
-    }
-    
-    get webhookUrl() {
-        return this.data.webhook_url;
-    }
     
     get channel() {
         return this.temp.channel;
@@ -69,26 +52,6 @@ class SyncChannel extends BaseModel {
     // *********** //
     // * Setters * //
     // *********** //
-    
-    set guildId(value) {
-        this.data.guild_id = value;
-    }
-    
-    set channelGroupId(value) {
-        this.data.channel_group_id = value;
-    }
-    
-    set allianceId(value) {
-        this.data.alliance_id = value;
-    }
-    
-    set webhookId(value) {
-        this.data.webhook_id = value;
-    }
-    
-    set webhookUrl(value) {
-        this.data.webhook_url = value;
-    }
     
     set channel(value) {
         this.temp.channel = value;
@@ -114,9 +77,9 @@ class SyncChannel extends BaseModel {
     
     async create() {
         // Check to see if this channel is already in a synchronization group
-        const syncChannel = await SyncChannel.get({id: this.id, unique: true});
-        if (syncChannel != null) {
-            throw new DuplicateError(`Channel already linked to channel synchronization group: ${syncChannel.name}`);
+        const channel = await Channel.get({id: this.id, unique: true});
+        if (channel != null) {
+            throw new DuplicateError(`Channel already linked to channel synchronization group: ${channel.name}`);
         }
         
         // Set webhook details
@@ -126,13 +89,6 @@ class SyncChannel extends BaseModel {
         // Check if we already have a webhook for this channel
         const webhooks = await this.channel.fetchWebhooks();
         let webhook = await webhooks.find(webhook => webhook.name == webhookName);
-        
-        //for (const nextWebhook of webhooks.values()) {
-        //    if (nextWebhook.name == webhookName) {
-        //        webhook = nextWebhook;
-        //        break;
-        //    }
-        //}
         
         // If we do not, then attempt to create one
         if (webhook == null) {
@@ -164,10 +120,10 @@ class SyncChannel extends BaseModel {
             return null;
         }
         
-        const SyncChannelGroup  = require(`${ROOT}/modules/sync/SyncChannelGroup`);
-        const syncChannelGroup = await SyncChannelGroup.get({id: this.channelGroupId, unique: true});
+        const ChannelGroup  = require(`${ROOT}/modules/data/ChannelGroup`);
+        const channelGroup = await ChannelGroup.get({id: this.channelGroupId, unique: true});
         
-        return `Ninkasi - Channel Sync Group [${syncChannelGroup.name}]`;
+        return `Ninkasi - Channel Sync Group [${channelGroup.name}]`;
     }
     
     getDiscordChannel() {
@@ -211,4 +167,4 @@ class SyncChannel extends BaseModel {
     }
 }
 
-module.exports = SyncChannel;
+module.exports = Channel;

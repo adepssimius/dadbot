@@ -3,7 +3,7 @@
 const ROOT = '../..';
 
 // Load our classes
-const Activity       = require(`${ROOT}/modules/event/Activity`);
+const Activity       = require(`${ROOT}/modules/data/Activity`);
 const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
@@ -34,7 +34,10 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     // Let's put things in context
     const context = {
         create: true,
-        activity: new Activity({creatorId: message.author.id})
+        activity: new Activity({
+            allianceId: null,
+            creatorId: message.author.id
+        })
     };
     
     // Get our property array
