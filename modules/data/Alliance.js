@@ -93,7 +93,6 @@ class Alliance extends BaseModel {
         
         // Make sure the creator is in the database
         if (await this.getCreator() == null) {
-            //this.creator = new Guardian({id: this.creatorId});
             this.creator = new Guardian({id: this.creatorId});
             await this.creator.create();
         }

@@ -16,8 +16,7 @@ class ChannelGroup extends BaseModel {
         orderBy: 'name',
         fields: [
             { dbFieldName: 'id',          type: 'snowflake', nullable: false },
-            { dbFieldName: 'type',        type: 'string',    nullable: false, length: 16,
-              validValues: ['event-config', 'sync'] },
+            { dbFieldName: 'type',        type: 'string',    nullable: false, length: 16, validValues: ['event-config', 'sync'] },
             { dbFieldName: 'name',        type: 'string',    nullable: false, length: 32 },
             { dbFieldName: 'alliance_id', type: 'snowflake', nullable: false, refTableName: 'alliance' },
             { dbFieldName: 'event_id',    type: 'snowflake', nullable: true,  refTableName: 'event' },

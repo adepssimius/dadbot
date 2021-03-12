@@ -32,9 +32,10 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     
     const value = args.join(' ');
     let activity = await Activity.get({
-        nameOrAlias: true,
+        nameOrAliasOrShortName: true,
         name: value,
         alias: value,
+        shortName: value,
         unique: true
     });
     

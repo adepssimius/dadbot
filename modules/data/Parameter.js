@@ -11,13 +11,15 @@ const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
-class AllianceParameter extends BaseModel {
+class Parameter extends BaseModel {
     static schema = this.parseSchema({
-        tableName: 'alliance_parameter',
+        tableName: 'parameter',
         orderBy: 'name',
         fields: [
             { dbFieldName: 'id',          type: 'snowflake', nullable: false },
-            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: false, refTableName: 'alliance' },
+            { dbFieldName: 'type',        type: 'string',    nullable: false, validValues: ['global', 'alliance', 'guild'] },
+            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true,  refTableName: 'alliance' },
+            { dbFieldName: 'guild_id',    type: 'snowflake', nullable: true,  refTableName: 'guild' },
             { dbFieldName: 'name',        type: 'string',    nullable: false, length: 32 },
             { dbFieldName: 'value',       type: 'string',    nullable: true,  length: 4096 },
             { dbFieldName: 'creator_id',  type: 'snowflake', nullable: false, refTableName: 'guardian' },
@@ -54,15 +56,20 @@ class AllianceParameter extends BaseModel {
     // ******************** //
     
     async create() {
-        const allianceParameter = await AllianceParameter.get({
-            allianceId: this.allianceId,
+        const duplicateQuery = {
+            type: this.type,
             name: this.name,
             unique: true
-        });
+        };
+        
+        if (this.allianceId) {
+            duplicateQuery.allianceId = this.allianceId;
+        }
         
         // Check if this is a duplicate alliance parameter
-        if (allianceParameter) {
-            throw new DuplicateError(`Existing parameter found for this alliance with the same name: ${this.name}`);
+        const parameter = await Parameter.get(duplicateQuery);
+        if (parameter) {
+            throw new DuplicateError(`Duplicate parameter found with the same name: ${this.name}${(this.allianceId ? ` [alliance id = ${this.allianceId}]` : '')}`);
         }
         
         // Make sure the creator is in the database
@@ -94,4 +101,4 @@ class AllianceParameter extends BaseModel {
     }
 }
 
-module.exports = AllianceParameter;
+module.exports = Parameter;

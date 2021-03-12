@@ -64,6 +64,17 @@ class Activity extends BaseModel {
             };
         }
         
+        if (conditions.nameOrAliasOrShortName) {
+            const ActivityAlias = require(`${ROOT}/modules/data/ActivityAlias`);
+            return (query) => {
+                query.where('name', conditions.name)
+                    .orWhere('short_name', conditions.shortName)
+                    .orWhereIn('id', function() {
+                        this.select('activity_id').from(ActivityAlias.schema.tableName).where('alias', conditions.alias.toUpperCase());
+                    });
+            };
+        }
+        
         if (conditions.alias) {
             const ActivityAlias = require(`${ROOT}/modules/data/ActivityAlias`);
             return (query) => {
@@ -135,6 +146,7 @@ class Activity extends BaseModel {
             .setTitle('Activity')
             .addFields(
                 { name: 'Name', value: this.name },
+                { name: 'Short Name', value: this.shortName },
                 { name: 'Aliases', value: aliasList },
                 { name: 'Category', value: `${activityCategory.title}` },
                 { name: 'Maximum Fireteam Size', value: this.fireteamSize },
@@ -191,7 +203,7 @@ class Activity extends BaseModel {
             
             prompt: async (message, nextMessage) => {
                 await message.channel.send( `What would you like to use for the short name of this activity? `
-                                          + `This should be less then 16 characters in length and will used to name event channels.`);
+                                          + `This should be 16 characters in length or less and will used to name event channels.`);
             },
             
             collect: async (message, nextMessage) => {

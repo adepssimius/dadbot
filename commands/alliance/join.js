@@ -42,25 +42,24 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     const alliance = alliances[0];
     
     // See if this guild is already in an alliance
-    const guilds = await Guild.get({id: message.guild.id});
+    let guild = await Guild.get({id: message.guild.id, unique: true});
     
-    if (guilds.length > 0 && guilds[0].allianceId != null) {
+    if (guild && guild.allianceId != null) {
         message.channel.send('This clan discord is already part of an alliance');
         return;
     }
     
     // Attempt to create the guild / add it to the alliance
     try {
-        let guild;
-        
-        if (guilds.length == 0) {
-            guild = await new Guild({
+        if (!guild) {
+            const guildData = {
                 id: message.guild.id,
-                allianceId: alliance.id
-            });
+                allianceId: alliance.id,
+                creatorId: message.author.id
+            };
+            guild = await new Guild(guildData);
             await guild.create();
         } else {
-            guild = guilds[0];
             guild.allianceId = alliance.id;
             await guild.update();
         }

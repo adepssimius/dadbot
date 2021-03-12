@@ -31,7 +31,13 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
     const value = args.join(' ');
-    let activity = await Activity.get({ nameOrAlias: true, name: value, alias: value, unique: true });
+    let activity = await Activity.get({
+        nameOrAliasOrShortName: true,
+        name: value,
+        alias: value,
+        shortName: value,
+        unique: true
+    });
     
     if (!activity) {
         message.channel.send(`Could not find activity: ${value}`);

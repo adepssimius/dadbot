@@ -66,27 +66,10 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     // Attempt to create the alliance
     try {
         await alliance.create();
-        
-        // Join the alliance
-        if (!guild) {
-            guild = new Guild({
-                id: message.guild.id,
-                allianceId: alliance.id
-            });
-            await guild.create();
-        } else {
-            guild.allianceId = alliance.id;
-            guild.update();
-        }
-        
-        message.channel.send(`Alliance created with this clan discord as the first member`);
+        message.channel.send(`Alliance created: ${alliance.title}`);
         
         client.logger.debug('Alliance:');
         client.logger.dump(alliance);
-        
-        client.logger.debug('Guild:');
-        client.logger.dump(guild);
-    
     } catch (error) {
         if (error instanceof DuplicateError) {
             client.replyWithError(error.message, message);

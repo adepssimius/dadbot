@@ -2,6 +2,9 @@
 // Determine our place in the world
 const ROOT = '..';
 
+// Load singletons
+const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
+
 class EmojiMap {
     static map        = new Map();
     static reverseMap = new Map();
@@ -50,7 +53,15 @@ class EmojiMap {
 }
 
 // Add some miscellaneous stuff
-EmojiMap.set(':x:', '❌');
+
+//const join  = client.emojis.cache.get('441040092203843584');
+//const leave = client.emojis.cache.get('441040091696201731');
+//const alt   = client.emojis.cache.get('441040092216426516');
+
+//EmojiMap.set(':x:', '❌');
+//EmojiMap.set(':+:', '');
+//EmojiMap.set(':-:', '');
+//EmojiMap.set(':?:', '');
 
 // Add numbers with their emoji names
 EmojiMap.set(':zero:',  '0️⃣', 1);

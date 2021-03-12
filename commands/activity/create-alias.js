@@ -37,9 +37,10 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     
     // Find the given activity
     let activity = await Activity.get({
-        nameOrAlias: true,
+        nameOrAliasOrShortName: true,
         name: activitySearchString,
         alias: activitySearchString,
+        shortName: activitySearchString,
         unique: true
     });
     

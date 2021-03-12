@@ -14,13 +14,13 @@ class Guild extends BaseModel {
         tableName: 'guild',
         orderBy: 'created_at',
         fields: [
-            { dbFieldName: 'id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true },
-            { dbFieldName: 'clan_name', type: 'string', length: 32, nullable: true },
-            { dbFieldName: 'clan_short_name', type: 'string', length: 32, nullable: true },
-            { dbFieldName: 'clan_bungie_num', type: 'integer', nullable: true },
-            { dbFieldName: 'timezone', type: 'string', length: 32, nullable: true },
-            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
+            { dbFieldName: 'id',              type: 'snowflake', nullable: false },
+            { dbFieldName: 'alliance_id',     type: 'snowflake', nullable: true, refTableName: 'alliance' },
+            { dbFieldName: 'clan_name',       type: 'string',    nullable: true, length: 32 },
+            { dbFieldName: 'clan_short_name', type: 'string',    nullable: true, length: 32 },
+            { dbFieldName: 'clan_bungie_num', type: 'integer',   nullable: true },
+            { dbFieldName: 'timezone',        type: 'string',    nullable: true, length: 32 },
+            { dbFieldName: 'creator_id',      type: 'snowflake', nullable: false, refTableName: 'guardian' }
         ]
     });
     

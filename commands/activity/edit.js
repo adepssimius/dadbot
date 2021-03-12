@@ -38,7 +38,13 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     const context = {create: false};
     
     const value = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
-    context.activity = await Activity.get({nameOrAlias: true, name: value, alias: value, unique: true});
+    context.activity = await Activity.get({
+        nameOrAliasOrShortName: true,
+        name: value,
+        alias: value,
+        shortName: value,
+        unique: true
+    });
     
     if (!context.activity) {
         message.channel.send(`Could not find activity: ${value}`);

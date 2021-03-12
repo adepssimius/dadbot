@@ -285,25 +285,31 @@ class Event extends BaseModel {
             }
             
             // Send the event info to the new channel
-            const eventDiscordMessage = await eventDiscordChannel.send(eventMessageContent)
+            const eventDiscordMessage = await eventDiscordChannel.send(eventMessageContent);
             
             // Save this message into the database
             const eventMessageData = {
                 id: eventDiscordMessage.id,
-                type: '',
+                type: 'event',
                 allianceId: alliance.id,
                 channelId: eventDiscordChannel.id,
                 guildId: eventDiscordMessage.guild.id,
                 eventId: this.id,
                 isReactionMessage: true,
-                authorId: eventDiscordMessage.authorId.id
+                reactionMessageType: 'event',
+                authorId: eventDiscordMessage.author.id
             };
             
             if (eventChannelGroup) {
                 eventMessageData.channelGroupId = eventChannelGroup.id;
             }
             
-            await eventMessageData.create();
+            const eventMessage = new Message(eventMessageData);
+            await eventMessage.create();
+            
+            await eventDiscordMessage.react(EmojiMap.get('+'));
+            await eventDiscordMessage.react(EmojiMap.get('-'));
+            await eventDiscordMessage.react(EmojiMap.get('?'));
             
             // If we have an eventChannelGroup, loop through the channels that are
             // part of the eventConfigChannelGroup and create a channel for each one
@@ -340,25 +346,27 @@ class Event extends BaseModel {
                     await linkedChannel.create();
                     
                     // Send the event info to the new channel
-                    await linkedDiscordChannel.send(eventMessageContent);
+                    const linkedDiscordMessage = await linkedDiscordChannel.send(eventMessageContent);
                     
                     // Save this message into the database
                     const linkedMessageData = {
-                        id: eventDiscordMessage.id,
-                        type: '',
+                        id: linkedDiscordMessage.id,
+                        type: 'event',
                         allianceId: alliance.id,
-                        channelId: eventDiscordChannel.id,
-                        guildId: eventDiscordMessage.guild.id,
+                        channelId: linkedChannel.id,
+                        guildId: linkedChannel.guildId,
                         eventId: this.id,
                         isReactionMessage: true,
-                        authorId: eventDiscordMessage.authorId.id
+                        reactionMessageType: 'event',
+                        authorId: linkedDiscordMessage.author.id
                     };
                     
                     if (eventChannelGroup) {
                         linkedMessageData.channelGroupId = eventChannelGroup.id;
                     }
                     
-                    await linkedMessageData.create();
+                    const linkedMessage = new Message(linkedMessageData);
+                    await linkedMessage.create();
                 }
             }
         }
@@ -475,9 +483,10 @@ class Event extends BaseModel {
                 
                 } else {
                     activity = await Activity.get({
-                        nameOrAlias: true,
+                        nameOrAliasOrShortName: true,
                         name: nextMessage.content,
                         alias: nextMessage.content,
+                        shortName: nextMessage.content,
                         unique: true
                     });
                     

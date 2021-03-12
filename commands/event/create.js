@@ -58,7 +58,13 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     // Check if an activity name/alias was given as an argument
     if (args.length > 0) {
         const value = args.join(' ').replace(/^'(.+)'$/g, '$1').replace(/^'(.+)'$/g, '$1');
-        const activity = await Activity.get({nameOrAlias: true, name: value, alias: value, unique: true});
+        const activity = await Activity.get({
+            nameOrAliasOrShortName: true,
+            name: value,
+            alias: value,
+            shortName: value,
+            unique: true
+        });
         
         if (activity) {
             message.channel.send(`Event type found: ${activity.title}`);

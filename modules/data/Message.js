@@ -5,6 +5,7 @@ const ROOT = '../..';
 // Load our classes
 const BaseModel      = require(`${ROOT}/modules/BaseModel`);
 const Channel        = require(`${ROOT}/modules/data/Channel`);
+const Guardian       = require(`${ROOT}/modules/data/Guardian`);
 const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
 
 // Load singletons
@@ -81,6 +82,7 @@ class Message extends BaseModel {
                 type           : 'sync',
                 allianceId     : channel.allianceId,
                 channelId      : message.channel.id,
+                eventId        : channel.event_id,
                 guildId        : message.guild.id,
                 channelGroupId : channel.channelGroupId,
                 isSyncMessage  : true,
@@ -215,6 +217,12 @@ class Message extends BaseModel {
             channelId: this.channelId,
             unique: true
         });
+        
+        // Make sure the author is in the database
+        if (await this.getAuthor() == null) {
+            this.author = new Guardian({id: this.authorId});
+            await this.author.create();
+        }
         
         if (syncMessage) {
             throw new DuplicateError(`This message has already been synchronized`);
