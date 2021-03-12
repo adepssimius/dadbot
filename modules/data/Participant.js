@@ -11,18 +11,18 @@ const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unus
 
 class Participant extends BaseModel {
     static schema = this.parseSchema({
-        tableName: 'event',
+        tableName: 'participant',
         orderBy: 'created_at',
         fields: [
-            { dbFieldName: 'guardian_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'event_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'joined_from_channel_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'joined_from_guild_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'is_primary', type: 'boolean', nullable: false },
-            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
-        ]
+            { dbFieldName: 'guardian_id',            type: 'snowflake', nullable: false, refTableName: 'guardian' },
+            { dbFieldName: 'event_id',               type: 'snowflake', nullable: false, refTableName: 'event'    },
+            { dbFieldName: 'joined_from_channel_id', type: 'snowflake', nullable: false, refTableName: 'channel'  },
+            { dbFieldName: 'joined_from_guild_id',   type: 'snowflake', nullable: false, refTableName: 'guild'    },
+            { dbFieldName: 'is_primary',             type: 'boolean',   nullable: false }
+        ],
+        primaryKey: ['guardian_id', 'event_id']
     });
-    
+        
     constructor(data) {
         super(data);
     }
@@ -31,7 +31,7 @@ class Participant extends BaseModel {
     // * Getters * //
     // *********** //
     
-    // No custom gettes required
+    // No custom getters required
     
     // *********** //
     // * Setters * //

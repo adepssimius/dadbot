@@ -8,16 +8,16 @@ const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unus
 const conf = {
     enabled: true,
     guildOnly: false,
-    aliases: ['sc'],
+    aliases: ['cg'],
     permLevel: 'viewer'
 };
 exports.conf = conf;
 
 const help = {
-    name: 'sync-channel',
-    category: 'Message Syncronization',
-    description: 'Synchronization channel administration command',
-    usage: 'sync-channel <action> [<args>]',
+    name: 'channel-group',
+    category: 'Channel Group Administration',
+    description: 'Channel group administration command',
+    usage: 'channel-group <action> [<args>]',
     minArgs: 1,
     maxArgs: null
 };

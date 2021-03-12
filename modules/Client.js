@@ -261,12 +261,12 @@ client.usage = (help, commandName, actionName) => {
     if (commandName) usageArgs[0] = commandName;
     if (actionName)  usageArgs[1] = actionName;
     
-    return usageArgs.join(' ');
+    return `Usage: ${client.config.prefix}${usageArgs.join(' ')}`;
 };
 
 client.argCountIsValid = (help, args, message, commandName, actionName) => {
     if ( (help.minArgs && args.length < help.minArgs) || (help.maxArgs && args.length > help.maxArgs) ) {
-        message.reply(`Usage: ${client.config.prefix}${client.usage(help, commandName, actionName)}`);
+        message.reply(client.usage(help, commandName, actionName));
         return false;
     }
     

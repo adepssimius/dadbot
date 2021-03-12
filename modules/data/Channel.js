@@ -19,21 +19,22 @@ class Channel extends BaseModel {
         tableName: 'channel',
         orderBy: 'created_at',
         fields: [
-            { dbFieldName: 'id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'type', type: 'string', length: 16, nullable: false },
-            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'guild_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'channel_group_id', type: 'snowflake', nullable: true },
-            { dbFieldName: 'event_id', type: 'snowflake', nullable: true },
-            { dbFieldName: 'is_command_channel', type: 'boolean', nullable: false },
-            { dbFieldName: 'is_event_channel', type: 'boolean', nullable: false },
-            { dbFieldName: 'is_sync_channel', type: 'boolean', nullable: false },
-            { dbFieldName: 'command_channel_type', type: 'string', length: 16, nullable: true },
-            { dbFieldName: 'webhook_id', type: 'snowflake', nullable: true },
-            { dbFieldName: 'webhook_url', type: 'string', length: 256, nullable: true },
+            { dbFieldName: 'id',                   type: 'snowflake', nullable: false },
+            { dbFieldName: 'type',                 type: 'string',    nullable: false, length: 16,
+              validValues: ['admin', 'event', 'event-config', 'sync'] },
+            { dbFieldName: 'alliance_id',          type: 'snowflake', nullable: false, refTableName: 'alliance' },
+            { dbFieldName: 'guild_id',             type: 'snowflake', nullable: false, refTableName: 'guild' },
+            { dbFieldName: 'channel_group_id',     type: 'snowflake', nullable: true,  refTableName: 'channel_group' },
+            { dbFieldName: 'event_id',             type: 'snowflake', nullable: true,  refTableName: 'event' },
+            { dbFieldName: 'is_event_channel',     type: 'boolean',   nullable: false, default: false },
+            { dbFieldName: 'is_sync_channel',      type: 'boolean',   nullable: false, default: false },
+            { dbFieldName: 'command_channel_type', type: 'string',    nullable: true, length: 16 },
+            { dbFieldName: 'webhook_id',           type: 'snowflake', nullable: true },
+            { dbFieldName: 'webhook_url',          type: 'string',    nullable: true, length: 256 },
         ],
         objects: [
-            { objectName: 'channel' }
+            { objectName: 'discordChannel' },
+            { objectName: 'webhook' }
         ]
     });
     
@@ -45,16 +46,16 @@ class Channel extends BaseModel {
     // * Getters * //
     // *********** //
     
-    get channel() {
-        return this.temp.channel;
+    get discordChannel() {
+        return this.temp.discordChannel;
     }
     
     // *********** //
     // * Setters * //
     // *********** //
     
-    set channel(value) {
-        this.temp.channel = value;
+    set discordChannel(value) {
+        this.temp.discordChannel = value;
     }
     
     // ***************** //
@@ -76,28 +77,34 @@ class Channel extends BaseModel {
     // ******************** //
     
     async create() {
-        // Check to see if this channel is already in a synchronization group
+        // Check to see if this channel is already in a channel group
         const channel = await Channel.get({id: this.id, unique: true});
         if (channel != null) {
-            throw new DuplicateError(`Channel already linked to channel synchronization group: ${channel.name}`);
+            throw new DuplicateError(`Channel already joined to channel ${this.type} group: ${channel.name}`);
         }
         
-        // Set webhook details
-        //let webhook;
-        const webhookName = await this.getWebhookName();
-        
-        // Check if we already have a webhook for this channel
-        const webhooks = await this.channel.fetchWebhooks();
-        let webhook = await webhooks.find(webhook => webhook.name == webhookName);
-        
-        // If we do not, then attempt to create one
-        if (webhook == null) {
-            webhook = await this.channel.createWebhook(webhookName, {avatar: client.user.displayAvatarURL()});
+        // If this is a sync channel, then set that up
+        if (this.isSyncChannel) {
+            // Set webhook details
+            const webhookName = await this.getWebhookName();
+            
+            // Make sure we have the discord channel
+            if (!this.discordChannel) {
+                this.discordChannel = await client.channels.fetch(this.id);
+            }
+            
+            // Check if we already have a webhook for this channel
+            const webhooks = await this.discordChannel.fetchWebhooks();
+            let webhook = await webhooks.find(webhook => webhook.name == webhookName);
+            
+            // If we do not, then attempt to create one
+            if (webhook == null) {
+                webhook = await this.discordChannel.createWebhook(webhookName, {avatar: client.user.displayAvatarURL()});
+            }
+            
+            // Set the webhook
+            this.webhook = webhook;
         }
-        
-        // Set the webhook values
-        this.webhookId  = webhook.id;
-        this.webhookUrl = webhook.url;
         
         // Finally attempt to create the synchronization channel
         await BaseModel.prototype.create.call(this);
@@ -106,9 +113,9 @@ class Channel extends BaseModel {
     async delete() {
         try {
             const webhook = await client.fetchWebhook(this.webhookId);
-            if (webhook != null) await webhook.delete();
+            if (webhook) await webhook.delete();
         } catch (error) {
-            if (error.name != 'DiscordAPIError' || error.message != 'Unknown Webhook') {
+            if ( !(error.name == 'DiscordAPIError' && (error.httpStatus == 404 || error.message != 'Unknown Webhook')) ) {
                 throw error;
             }
         }
@@ -126,8 +133,8 @@ class Channel extends BaseModel {
         return `Ninkasi - Channel Sync Group [${channelGroup.name}]`;
     }
     
-    getDiscordChannel() {
-        return client.channels.fetch(this.id);
+    async getDiscordChannel() {
+        return await client.channels.fetch(this.id);
     }
     
     getWebhookExecuteURL(messageID) {

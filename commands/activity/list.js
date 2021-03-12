@@ -39,7 +39,7 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
         activityCategories = await ActivityCategory.get({nameOrSymbol: true,  name: value, symbol: value});
         
         if (activityCategories.length == 0) {
-            message.channel.send(`Could not activity category name or symbol: ${value}`);
+            message.channel.send(`Invalid activity category name or symbol: ${value}`);
             return;
         }
     }
@@ -53,7 +53,7 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
         let response = `__**${activityCategory.name}**__\n`;
         response += `Found ${activities.length} `;
         
-        if (activities.length == 0 || activities.length > 1) {
+        if (activities.length != 1) {
             response += 'activities';
         } else {
             response += 'activity';

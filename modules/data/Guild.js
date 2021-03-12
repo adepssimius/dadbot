@@ -26,6 +26,11 @@ class Guild extends BaseModel {
     
     constructor(data) {
         super(data);
+        
+        for (let f = 0; f < this.schema.fields.length; f++) {
+            const field = this.schema.fields[f];
+            console.log(field);
+        }
     }
     
     // *********** //

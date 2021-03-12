@@ -56,7 +56,7 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
         if (guilds.length == 0) {
             guild = await new Guild({
                 id: message.guild.id,
-                allianceId: alliance.allianceId
+                allianceId: alliance.id
             });
             await guild.create();
         } else {

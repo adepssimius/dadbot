@@ -3,11 +3,12 @@
 const ROOT = '../..';
 
 // Load our classes
-const BaseModel = require(`${ROOT}/modules/BaseModel`);
-const EmojiMap  = require(`${ROOT}/modules/EmojiMap`);
-const Snowflake = require(`${ROOT}/modules/Snowflake`);
-const Timestamp = require(`${ROOT}/modules/Timestamp`);
-const Guardian  = require(`${ROOT}/modules/data/Guardian`);
+const BaseModel      = require(`${ROOT}/modules/BaseModel`);
+const EmojiMap       = require(`${ROOT}/modules/EmojiMap`);
+const Snowflake      = require(`${ROOT}/modules/Snowflake`);
+const Timestamp      = require(`${ROOT}/modules/Timestamp`);
+const Guardian       = require(`${ROOT}/modules/data/Guardian`);
+const UserFriendlyId = require(`${ROOT}/modules/data/UserFriendlyId`);
 
 // Load external classes
 const Discord = require('discord.js');
@@ -20,21 +21,23 @@ class Event extends BaseModel {
         tableName: 'event',
         orderBy: 'start_time',
         fields: [
-            { dbFieldName: 'id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'activity_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'activity_category_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'guild_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true },
-            { dbFieldName: 'channel_name', type: 'string', length: 32, nullable: false },
-            { dbFieldName: 'description', type: 'string', length: 256, nullable: true },
-            { dbFieldName: 'platform', type: 'string', length: 16, nullable: false },
-            { dbFieldName: 'start_time', type: 'datetime', nullable: false },
-            { dbFieldName: 'est_max_duration', type: 'integer', nullable: false },
-            { dbFieldName: 'fireteam_size', type: 'integer', nullable: false },
-            { dbFieldName: 'is_private', type: 'boolean', nullable: false },
-            { dbFieldName: 'auto_delete', type: 'boolean', nullable: false },
-            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'owner_id', type: 'snowflake', nullable: false }
+            { dbFieldName: 'id',                   type: 'snowflake', nullable: false },
+            { dbFieldName: 'ufid',                 type: 'string',    nullable: false, length: 8 },
+            { dbFieldName: 'activity_id',          type: 'snowflake', nullable: false, refTableName: 'activity' },
+            { dbFieldName: 'activity_category_id', type: 'snowflake', nullable: false, refTableName: 'activity_category' },
+            { dbFieldName: 'guild_id',             type: 'snowflake', nullable: false, refTableName: 'guild' },
+            { dbFieldName: 'alliance_id',          type: 'snowflake', nullable: true,  refTableName: 'alliance' },
+            { dbFieldName: 'channel_name',         type: 'string',    nullable: false, length: 32 },
+            { dbFieldName: 'description',          type: 'string',    nullable: true,  length: 256 },
+            { dbFieldName: 'status',               type: 'string',    nullable: true,  length: 16 },
+            { dbFieldName: 'platform',             type: 'string',    nullable: false, length: 16 },
+            { dbFieldName: 'start_time',           type: 'datetime',  nullable: false },
+            { dbFieldName: 'est_max_duration',     type: 'integer',   nullable: false },
+            { dbFieldName: 'fireteam_size',        type: 'integer',   nullable: false },
+            { dbFieldName: 'is_private',           type: 'boolean',   nullable: false },
+            { dbFieldName: 'auto_delete',          type: 'boolean',   nullable: false },
+            { dbFieldName: 'creator_id',           type: 'snowflake', nullable: false, refTableName: 'guardian' },
+            { dbFieldName: 'owner_id',             type: 'snowflake', nullable: false, refTableName: 'guardian' }
         ]
     });
     
@@ -78,12 +81,29 @@ class Event extends BaseModel {
         }
         
         // Make sure the owner is in the database
-        if (await this.getOwner() == null) {
-            this.owner = new Guardian({id: this.creatorId});
+        const owner = await this.getOwner();
+        //if (await this.getOwner() == null) {
+        if (owner == null) {
+            this.owner = new Guardian({id: this.ownerId});
             await this.owner.create();
         }
         
-        // Generate the id and attempt to insert the record into the database
+        // Generate a user friendly id for this event
+        const activityCategory = await this.getActivityCategory(true);
+        const userFriendlyIdData = {
+            type: 'event',
+            objectId: this.id,
+            prefix: activityCategory.symbol,
+            digits: 3,
+            status: 'Scheduled',
+            isActive: true,
+            creatorId: this.creatorId
+        };
+        const userFriendlyId = new UserFriendlyId(userFriendlyIdData);
+        await userFriendlyId.create();
+        this.userFriendlyId = userFriendlyId;
+        
+        // Generate id and attempt to insert the record into the database
         this.id = Snowflake.generate();
         await BaseModel.prototype.create.call(this);
     }
@@ -111,7 +131,8 @@ class Event extends BaseModel {
             .setTitle(`${activity.name} [${activityCategory.name}]`)
             .addFields(
                 { name: 'Date', value: startDate, inline: true },
-                { name: 'Time', value: startTime, inline: true }
+                { name: 'Time', value: startTime, inline: true },
+                { name: 'ID', value: this.ufid }
             )
             .addFields(
                 { name: 'Privacy', value: ( this.isPrivate ? 'Clan' : 'Alliance' ), inline: true },
@@ -129,8 +150,9 @@ class Event extends BaseModel {
     }
     
     async deriveChannelName() {
-        const activity = this.getActivity();
-        const tsParts = this.ts.formatToParts();
+        const activity = await this.getActivity();
+        const ts = new Timestamp(this.startTime);
+        const tsParts = ts.formatToParts();
         
         client.logger.debug('activity Aliases:');
         client.logger.dump(activity);
@@ -161,33 +183,185 @@ class Event extends BaseModel {
     // ****************************************************** //
     
     async setupEventChannels(message) {
-        const eventMessageContent = await this.toMessageContent();
-        const EventChannel = require(`${ROOT}/modules/data/EventChannel`);
-        let   eventChannel = await EventChannel.get({eventId: this.id, guildId: this.guildId, unique: true});
+        const Alliance     = require(`${ROOT}/modules/data/Alliance`);
+        const Channel      = require(`${ROOT}/modules/data/Channel`);
+        const ChannelGroup = require(`${ROOT}/modules/data/ChannelGroup`);
+        const Message      = require(`${ROOT}/modules/data/Message`);
         
-        if (eventChannel) {
+        const eventMessageContent = await this.toMessageContent();
+        const eventChannelName = await this.deriveChannelName();
+        let   eventChannel = await Channel.get({eventId: this.id, guildId: this.guildId, unique: true});
+        
+        if (eventChannel && (eventChannel.type != 'sync' || !eventChannel.isEventChannel || !eventChannel.isSyncChannel)) {
             throw new Error(`There is already event channel in this discord clan for this event`);
         }
         
-        // First create the channel for the originating guild
-        const channel = await message.guild.channels.create(await this.deriveChannelName(), {
-            type: 'text',
-            topic: await this.deriveChannelTopic(),
-            nsfw: false,
-            parent: message.channel.parent
-        });
+        // Get the alliance for this guild
+        const alliance = await Alliance.get({guildId: message.guild.id, unique: true});
+        let   eventConfigChannelGroup;
+        let   eventChannelGroup;
+        let   linkedEventConfigChannels = [];
         
-        // Save the event channel to the database
-        eventChannel = new EventChannel({
-            channelId: channel.id,
-            eventId: this.id,
-            guildId: message.guild.id,
-            guildName: message.guild.name
-        });
-        await eventChannel.create();
-        
-        // Send the event info to the new channel
-        channel.send(eventMessageContent);
+        if (alliance) {
+            // Get the event-config channel group for the message channel
+            const eventConfigChannelGroupQuery = {
+                channelId: message.channel.id,
+                type: 'event-config',
+                allianceId: alliance.id,
+                unique: true
+            };
+            eventConfigChannelGroup = await ChannelGroup.get(eventConfigChannelGroupQuery);
+            
+            if (eventConfigChannelGroup) {
+                const linkedEventConfigChannelsQuery = {
+                    type: 'event-config',
+                    channelGroupId: eventConfigChannelGroup.id
+                };
+                const allLinkedEventConfigChannels = await Channel.get(linkedEventConfigChannelsQuery);
+                
+                for (let c = 0; c < allLinkedEventConfigChannels.length; c++) {
+                    if (allLinkedEventConfigChannels[c].id != message.channel.id) {
+                        linkedEventConfigChannels.push(allLinkedEventConfigChannels[c]);
+                    }
+                }
+                
+                // If we have at least one linked channel, create a sync channel group for this event
+                if (linkedEventConfigChannels.length > 0) {
+                    const eventChannelGroupQuery = {
+                        type: 'sync',
+                        allianceId: alliance.id,
+                        eventId: this.id,
+                        unique: true
+                    };
+                    eventChannelGroup = await ChannelGroup.get(eventChannelGroupQuery);
+                    
+                    if (!eventChannelGroup) {
+                        const eventChannelGroupData = {
+                            type: 'sync',
+                            name: eventChannelName,
+                            allianceId: alliance.id,
+                            eventId: this.id,
+                            creatorId: message.author.id
+                        };
+                        eventChannelGroup = new ChannelGroup(eventChannelGroupData);
+                        await eventChannelGroup.create();
+                    }
+                }
+            }
+            
+            // First create the channel for the originating guild
+            let eventDiscordChannel;
+            
+            if (eventChannel) {
+                eventDiscordChannel = await client.channels.fetch(eventChannel.id);
+            } else {
+                eventDiscordChannel = await message.guild.channels.create(
+                    eventChannelName,
+                    {
+                        type: 'text',
+                        topic: await this.deriveChannelTopic(),
+                        nsfw: false,
+                        parent: message.channel.parent
+                    }
+                );
+                
+                // Save the event channel to the database
+                const eventChannelData = {
+                    id: eventDiscordChannel.id,
+                    type: 'sync',
+                    allianceId: alliance.id,
+                    guildId: message.guild.id,
+                    eventId: this.id,
+                    isEventChannel: true
+                };
+                
+                if (eventChannelGroup) {
+                    eventChannelData.channelGroupId = eventChannelGroup.id;
+                    eventChannelData.isSyncChannel = true;
+                }
+                
+                eventChannel = new Channel(eventChannelData);
+                await eventChannel.create();
+            }
+            
+            // Send the event info to the new channel
+            const eventDiscordMessage = await eventDiscordChannel.send(eventMessageContent)
+            
+            // Save this message into the database
+            const eventMessageData = {
+                id: eventDiscordMessage.id,
+                type: '',
+                allianceId: alliance.id,
+                channelId: eventDiscordChannel.id,
+                guildId: eventDiscordMessage.guild.id,
+                eventId: this.id,
+                isReactionMessage: true,
+                authorId: eventDiscordMessage.authorId.id
+            };
+            
+            if (eventChannelGroup) {
+                eventMessageData.channelGroupId = eventChannelGroup.id;
+            }
+            
+            await eventMessageData.create();
+            
+            // If we have an eventChannelGroup, loop through the channels that are
+            // part of the eventConfigChannelGroup and create a channel for each one
+            if (eventChannelGroup) {
+                for (let c = 0; c < linkedEventConfigChannels.length; c++) {
+                    const linkedEventConfigChannel = linkedEventConfigChannels[c];
+                    const linkedEventConfigDiscordChannel = await client.channels.fetch(linkedEventConfigChannel.id); 
+                    const linkedDiscordGuild = await client.guilds.fetch(linkedEventConfigChannel.guildId);
+                    
+                    // Create the channel for the linked guild
+                    const linkedDiscordChannel = await linkedDiscordGuild.channels.create(
+                        eventChannelName,
+                        {
+                            type: 'text',
+                            topic: await this.deriveChannelTopic(),
+                            nsfw: false,
+                            parent: linkedEventConfigDiscordChannel.parent
+                        }
+                    );
+                    
+                    // Save the event channel to the database
+                    const linkedChannelData = {
+                        id: linkedDiscordChannel.id,
+                        type: 'sync',
+                        allianceId: alliance.id,
+                        guildId: linkedEventConfigChannel.guildId,
+                        channelGroupId: eventChannelGroup.id,
+                        eventId: this.id,
+                        isEventChannel: true,
+                        isSyncChannel: true
+                    };
+                    
+                    const linkedChannel = new Channel(linkedChannelData);
+                    await linkedChannel.create();
+                    
+                    // Send the event info to the new channel
+                    await linkedDiscordChannel.send(eventMessageContent);
+                    
+                    // Save this message into the database
+                    const linkedMessageData = {
+                        id: eventDiscordMessage.id,
+                        type: '',
+                        allianceId: alliance.id,
+                        channelId: eventDiscordChannel.id,
+                        guildId: eventDiscordMessage.guild.id,
+                        eventId: this.id,
+                        isReactionMessage: true,
+                        authorId: eventDiscordMessage.authorId.id
+                    };
+                    
+                    if (eventChannelGroup) {
+                        linkedMessageData.channelGroupId = eventChannelGroup.id;
+                    }
+                    
+                    await linkedMessageData.create();
+                }
+            }
+        }
     }
     
     // ************************************************************ //

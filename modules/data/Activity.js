@@ -20,14 +20,14 @@ class Activity extends BaseModel {
         tableName: 'activity',
         orderBy: 'name',
         fields: [
-            { dbFieldName: 'id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'name', type: 'string', length: 32, nullable: false },
-            { dbFieldName: 'short_name', type: 'string', length: 16, nullable: false },
-            { dbFieldName: 'activity_category_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true },
-            { dbFieldName: 'est_max_duration', type: 'integer', nullable: false },
-            { dbFieldName: 'fireteam_size', type: 'integer', nullable: false },
-            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
+            { dbFieldName: 'id',                   type: 'snowflake', nullable: false },
+            { dbFieldName: 'name',                 type: 'string',    nullable: false, length: 32 },
+            { dbFieldName: 'short_name',           type: 'string',    nullable: false, length: 16 },
+            { dbFieldName: 'activity_category_id', type: 'snowflake', nullable: false, refTableName: 'activity_category'},
+            { dbFieldName: 'alliance_id',          type: 'snowflake', nullable: true,  refTableName: 'alliance' },
+            { dbFieldName: 'est_max_duration',     type: 'integer',   nullable: false },
+            { dbFieldName: 'fireteam_size',        type: 'integer',   nullable: false },
+            { dbFieldName: 'creator_id',           type: 'snowflake', nullable: false, refTableName: 'guardian'}
         ]
     });
     

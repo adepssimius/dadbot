@@ -16,10 +16,10 @@ class Alliance extends BaseModel {
         tableName: 'alliance',
         orderBy: 'name',
         fields: [
-            { dbFieldName: 'id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'name', type: 'string', length: 32, nullable: false },
-            { dbFieldName: 'short_name', type: 'string', length: 4, nullable: false },
-            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
+            { dbFieldName: 'id',         type: 'snowflake', nullable: false },
+            { dbFieldName: 'name',       type: 'string',    nullable: false, length: 32 },
+            { dbFieldName: 'short_name', type: 'string',    nullable: false, length: 4 },
+            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false, refTableName: 'guardian' }
         ]
     });
     
@@ -93,6 +93,7 @@ class Alliance extends BaseModel {
         
         // Make sure the creator is in the database
         if (await this.getCreator() == null) {
+            //this.creator = new Guardian({id: this.creatorId});
             this.creator = new Guardian({id: this.creatorId});
             await this.creator.create();
         }

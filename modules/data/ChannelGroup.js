@@ -15,12 +15,13 @@ class ChannelGroup extends BaseModel {
         tableName: 'channel_group',
         orderBy: 'name',
         fields: [
-            { dbFieldName: 'id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'type', type: 'string', length: 16, nullable: false },
-            { dbFieldName: 'name', type: 'string', length: 32, nullable: false },
-            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'event_id', type: 'snowflake', nullable: true },
-            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
+            { dbFieldName: 'id',          type: 'snowflake', nullable: false },
+            { dbFieldName: 'type',        type: 'string',    nullable: false, length: 16,
+              validValues: ['event-config', 'sync'] },
+            { dbFieldName: 'name',        type: 'string',    nullable: false, length: 32 },
+            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: false, refTableName: 'alliance' },
+            { dbFieldName: 'event_id',    type: 'snowflake', nullable: true,  refTableName: 'event' },
+            { dbFieldName: 'creator_id',  type: 'snowflake', nullable: false, refTableName: 'guardian' }
         ]
     });
     
@@ -44,17 +45,35 @@ class ChannelGroup extends BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    // None yet!
+    static parseConditions(conditions) {
+        if (conditions.channelId) {
+            const Channel = require(`${ROOT}/modules/data/Channel`);
+            return (query) => {
+                query.where('type', conditions.type)
+                    .where('alliance_id', conditions.allianceId)
+                    .orWhereIn('id', function() {
+                        this.select('id').from(Channel.schema.tableName).where('id', conditions.channelId);
+                    });
+            };
+        }
+        
+        return conditions;
+    }
     
     // ******************** //
     // * Instance Methods * //
     // ******************** //
     
     async create() {
-        const channelGroups = await ChannelGroup.get({name: this.name, type: this.type, allianceId: this.allianceId});
+        const channelGroup = await ChannelGroup.get({
+            name: this.name,
+            type: this.type,
+            allianceId: this.allianceId,
+            unique: true
+        });
         
         // Check if this is a duplicate channelgroup
-        if (channelGroups.length > 0) {
+        if (channelGroup) {
             throw new DuplicateError(`There is already a channel group in this alliance of type ${this.type} called '${this.name}'`);
         }
         

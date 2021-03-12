@@ -41,8 +41,9 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     const context = {
         create: true,
         event: new Event({
-            allianceId: (alliance ? alliance.id : null),
             guildId: message.guild.id,
+            allianceId: (alliance ? alliance.id : null),
+            status: 'Scheduled',
             platform: 'Stadia',
             isPrivate: false,
             autoDelete: false,

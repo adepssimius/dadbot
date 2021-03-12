@@ -16,12 +16,12 @@ class AllianceParameter extends BaseModel {
         tableName: 'alliance_parameter',
         orderBy: 'name',
         fields: [
-            { dbFieldName: 'id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'alliance_id', type: 'snowflake', length: 32, nullable: false },
-            { dbFieldName: 'name', type: 'string', length: 32, nullable: false },
-            { dbFieldName: 'value', type: 'string', length: 4096, nullable: true },
-            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'updater_id', type: 'snowflake', nullable: false }
+            { dbFieldName: 'id',          type: 'snowflake', nullable: false },
+            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: false, refTableName: 'alliance' },
+            { dbFieldName: 'name',        type: 'string',    nullable: false, length: 32 },
+            { dbFieldName: 'value',       type: 'string',    nullable: true,  length: 4096 },
+            { dbFieldName: 'creator_id',  type: 'snowflake', nullable: false, refTableName: 'guardian' },
+            { dbFieldName: 'updater_id',  type: 'snowflake', nullable: false, refTableName: 'guardian' }
         ]
     });
     

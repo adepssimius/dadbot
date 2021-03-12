@@ -16,11 +16,11 @@ class ActivityAlias extends BaseModel {
         tableName: 'activity_alias',
         orderBy: 'alias',
         fields: [
-            { dbFieldName: 'id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'alias', type: 'unknown', length: 32, nullable: true },
-            { dbFieldName: 'activity_id', type: 'string', length: 1, nullable: false },
-            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true },
-            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
+            { dbFieldName: 'id',          type: 'snowflake', nullable: false },
+            { dbFieldName: 'alias',       type: 'string',    nullable: true,  length: 16 },
+            { dbFieldName: 'activity_id', type: 'snowflake', nullable: false, refTableName: 'activity' },
+            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true,  refTableName: 'alliance' },
+            { dbFieldName: 'creator_id',  type: 'snowflake', nullable: false, refTableName: 'guardian' }
         ]
     });
     

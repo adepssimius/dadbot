@@ -17,11 +17,11 @@ class ActivityCategory extends BaseModel {
         tableName: 'activity_category',
         orderBy: 'name',
         fields: [
-            { dbFieldName: 'id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'name', type: 'string', length: 32, nullable: false },
-            { dbFieldName: 'symbol', type: 'string', length: 1, nullable: false },
-            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true },
-            { dbFieldName: 'creator_id', type: 'snowflake', nullable: false }
+            { dbFieldName: 'id',          type: 'snowflake', nullable: false },
+            { dbFieldName: 'name',        type: 'string',    nullable: false, length: 32 },
+            { dbFieldName: 'symbol',      type: 'string',    nullable: false, length: 1 },
+            { dbFieldName: 'alliance_id', type: 'snowflake', nullable: true,  refTableName: 'alliance' },
+            { dbFieldName: 'creator_id',  type: 'snowflake', nullable: false, refTableName: 'guardian' }
         ]
     });
     

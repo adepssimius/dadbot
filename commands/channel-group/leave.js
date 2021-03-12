@@ -18,13 +18,13 @@ const conf = {
 exports.conf = conf;
 
 const help = {
-    command: 'sync-channel',
-    name: 'unlink',
-    category: 'Message Synchronization',
-    description: 'Unlink this channel from a synchronization group',
-    usage: 'sync-channel unlink [<channel>]',
+    command: 'channel-group',
+    name: 'leave',
+    category: 'Channel Administration',
+    description: `Leave the channel's current channel group`,
+    usage: `channel-group leave [<channel>]`,
     minArgs: null,
-    maxArgs: null
+    maxArgs: 1
 };
 exports.help = help;
 
@@ -36,14 +36,9 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     // instead of always linking to the channel from which the command was called
     //
     
-    if (args.length != 0) {
-        message.reply(`Usage: ${client.config.prefix}${help.usage}`);
-        return;
-    }
-    
     const channel = await Channel.get({id: message.channel.id, unique: true});
-    if (channel == null) {
-        message.channel.send(`This channel is not linked to a channel synchronization group`);
+    if (!channel) {
+        message.channel.send(`This channel is not part of a channel group`);
         return;
     }
     
@@ -51,9 +46,9 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
 
     try {
         await channel.delete();
-        message.channel.send(`Channel unlinked from channel synchronization group: ${channelGroup.name}`);
+        message.channel.send(`Channel left channel channel group: ${channelGroup.name}`);
     } catch (error) {
-        await client.replyWithErrorAndDM(`Unlinking channel from channel synchronization group failed: ${channelGroup.name}`, message, error);
+        await client.replyWithErrorAndDM(`Leaving channel failed: ${channelGroup.name}`, message, error);
         client.logger.dump(error);
     }
 };

@@ -16,6 +16,9 @@ const knex   = require(`${ROOT}/modules/Database`); // eslint-disable-line no-un
 const init = async () => {
     const fs = require('fs');
     
+    // Initialize the databsae
+    await knex.ninkasiDatabaseInit();
+    
     // Load commands** into memory
     const commandFiles = fs.readdirSync(`${ROOT}/commands/`);
     

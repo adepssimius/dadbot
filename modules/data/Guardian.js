@@ -14,19 +14,14 @@ class Guardian extends BaseModel {
         tableName: 'guardian',
         orderBy: 'username',
         fields: [
-            { dbFieldName: 'id', type: 'snowflake', nullable: false },
-            { dbFieldName: 'username', type: 'string', length: 32, nullable: false },
-            { dbFieldName: 'timezone', type: 'string', length: 32, nullable: true },
+            { dbFieldName: 'id',       type: 'snowflake', nullable: false },
+            { dbFieldName: 'username', type: 'string',    nullable: false, length: 32 },
+            { dbFieldName: 'timezone', type: 'string',    nullable: true,  length: 32 },
             { dbFieldName: 'private_event_default', type: 'boolean', nullable: false, default: false }
         ]
     });
     
     constructor(data) {
-        // Set default values
-        //if (data) {
-        //    if (!data.privateEventDefault) data.privateEventDefault = false;
-        //}
-        
         super(data);
     }
     
