@@ -1,16 +1,27 @@
 const config = {
     // Your Bot's token. Available on https://discord.com/developers/applications/me
-    token: '',
+    token: '<add-token-here>',
     
     // Your Bot's prefix
     prefix: '!',
     
     // Your database configuration. This can be anything supported by knex.
     // See http://knexjs.org/#Installation-client for examples.
-    database: {},
+    database: {
+        client: 'mysql',
+        connection: {
+            host: '127.0.0.1',
+            database: 'ninkasi',
+            user: 'ninkasi',
+            password: '<add-password-here>'
+        }
+    },
     
     // Bot Owner ID string array
-    botOwnerIDs: [],
+    botOwnerIDs: [
+        '211955406535131136', // captbunzo
+        '498512594336743434'  // Mono
+    ],
     
     // Bot Admins role ID string array
     botAdminRoleIDs: ['813924095879938118'],
