@@ -360,10 +360,15 @@ class Event extends BaseModel {
         };
         
         // Get the alliance for this guild
-        const alliance = await Alliance.get({guildId: discordMessage.guild.id, unique: true});
-        let   eventConfigChannelGroup;
-        let   eventChannelGroup;
-        let   linkedEventConfigChannels = [];
+        let alliance;
+        let eventConfigChannelGroup;
+        let eventChannelGroup;
+        let linkedEventConfigChannels = [];
+        
+        // if this is not a private event, grab the alliance
+        if (!this.isPrivate) {
+            alliance = await Alliance.get({guildId: discordMessage.guild.id, unique: true});
+        }
         
         if (alliance) {
             // Get the event-config channel group for the message channel
