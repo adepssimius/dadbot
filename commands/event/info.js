@@ -38,6 +38,6 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
         return;
     }
     
-    message.channel.send(await event.toMessageContent());
+    message.channel.send(await event.getMessageContent());
 };
 exports.run = run;

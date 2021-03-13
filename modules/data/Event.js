@@ -8,6 +8,7 @@ const EmojiMap       = require(`${ROOT}/modules/EmojiMap`);
 const Snowflake      = require(`${ROOT}/modules/Snowflake`);
 const Timestamp      = require(`${ROOT}/modules/Timestamp`);
 const Guardian       = require(`${ROOT}/modules/data/Guardian`);
+const Participant    = require(`${ROOT}/modules/data/Participant`);
 const UserFriendlyId = require(`${ROOT}/modules/data/UserFriendlyId`);
 
 // Load external classes
@@ -65,9 +66,9 @@ class Event extends BaseModel {
     // * Class Methods * //
     // ***************** //
     
-    //static parseConditions(conditions) {
-    //    return conditions;
-    //}
+    static parseConditions(conditions) {
+        return conditions;
+    }
     
     // ******************** //
     // * Instance Methods * //
@@ -112,7 +113,7 @@ class Event extends BaseModel {
         await BaseModel.prototype.delete.call(this);
     }
     
-    async toMessageContent() {
+    async getMessageContent() {
         const activity         = await this.getActivity();
         const activityCategory = await this.getActivityCategory();
         const creator          = await this.getCreator();
@@ -122,10 +123,25 @@ class Event extends BaseModel {
         const startDate = startTs.formatDate();
         const startTime = startTs.formatTime('short');
         
-        const participants = [];
-        const alternates   = [];
+        const participantDetails = await this.getParticipantDetails();
+        const primaries  = participantDetails.primaries;
+        const alternates = participantDetails.alternates;
         
-        const participantNames = [];
+        const primaryNames = [];
+        for (let p = 0; p < primaries.length; p++) {
+            const participant = primaries[p];
+            const discordUser = await participant.getDiscordUser();
+            primaryNames.push(discordUser.username);
+        }
+        primaryNames.sort();
+        
+        const alternateNames = [];
+        for (let p = 0; p < alternates.length; p++) {
+            const participant = alternates[p];
+            const discordUser = await participant.getDiscordUser();
+            alternateNames.push(discordUser.username);
+        }
+        alternateNames.sort();
         
         const embed = new Discord.MessageEmbed()
             .setTitle(`${activity.name} [${activityCategory.name}]`)
@@ -140,8 +156,12 @@ class Event extends BaseModel {
             )
             .addField('Description', ( this.description ? this.description : 'No description given' ))
             .addField(
-                `Guardians Joined: ${participants.length}/${this.fireteamSize}`,
-                ( participantNames.length == 0 ? 'None Yet' : participantNames.join(', ') )
+                `Guardians Joined: ${primaries.length}/${this.fireteamSize}`,
+                ( primaryNames.length == 0 ? 'None Yet' : primaryNames.join(', ') )
+            )
+            .addField(
+                `Alternates: ${alternates.length}`,
+                ( alternateNames.length == 0 ? 'None Yet' : alternateNames.join(', ') )
             )
             .setTimestamp()
             .setFooter(`Creator: ${creator.username} • Owner: ${owner.username}`);
@@ -172,10 +192,150 @@ class Event extends BaseModel {
     
     async deriveChannelTopic() {
         const startTs  = new Timestamp(this.startTime);
-        const Activity = require(`${ROOT}/modules/data/Activity`);
         const activity = await this.getActivity();
         
         return `${activity.name} @ ${startTs.convert()}`;
+    }
+    
+    async updateEventMessages() {
+        const Message  = require(`${ROOT}/modules/data/Message`);
+        const messages = await Message.get({type: 'event', eventId: this.id});
+        const content  = await this.getMessageContent();
+        
+        for (let m = 0; m < messages.length; m++) {
+            const message = messages[m];
+            const discordMessage = await message.getDiscordMessage({required: true});
+            discordMessage.edit(content);
+        }
+    }
+    
+    async getParticipantDetails(guardianId) {
+        const participants = await Participant.get({eventId: this.id}); 
+        const primaries    = [];
+        const alternates   = [];
+        let   participant;
+        
+        for (let p = 0; p < participants.length; p++) {
+            const nextParticipant = participants[p];
+            
+            if (nextParticipant.isPrimary) {
+                primaries.push(nextParticipant);
+            } else {
+                alternates.push(nextParticipant);
+            }
+            
+            if (guardianId && nextParticipant.guardianId == guardianId) {
+                participant = nextParticipant;
+            }
+        }
+        
+        return {
+            primaries: primaries,
+            alternates: alternates,
+            participant: participant
+        };
+    }
+    
+    async join(user, discordChannel, isPrimary = true) {
+        let guardian = await Guardian.get({id: user.id, unique: true});
+        
+        // Make sure the discord user is in the database
+        if (!guardian) {
+            guardian = new Guardian({id: user.id});
+            await guardian.create();
+        }
+        
+        // Collect the participants for this event
+        const details      = await this.getParticipantDetails(user.id);
+        const primaries    = details.primaries;
+        let   participant  = details.participant;
+        let   eventChanged = false;
+        let   participantData;
+        let   message = `<@${user.id}>, `;
+        
+        if (!participant) {
+            participantData = {
+                guardianId: user.id,
+                eventId: this.id,
+                joinedFromChannelId: discordChannel.id,
+                joinedFromGuildId: discordChannel.guild.id,
+                isPrimary: isPrimary
+            };
+        }
+        
+        // Primary participants
+        if (isPrimary) {
+            if (participant && participant.isPrimary) {
+                message += `you are already participating in this event`;
+            
+            } else if ( (this.fireteamSize == primaries.length) && (!participant || !participant.isPrimary) ) {
+                message += `the fireteam for this event is already full`;
+            
+            } else if (!participant) {
+                eventChanged = true;
+                participantData.isPrimary = true;
+                participant = new Participant(participantData);
+                
+                await participant.create();
+                message += `you have been added to this event`;
+                
+            } else {
+                eventChanged = true;
+                participant.isPrimary = true;
+                
+                await participant.update();
+                message += `you have been changed to a primary for this event`;
+            }
+        
+        // Alternate participants
+        } else {
+            if (!participant) {
+                eventChanged = true;
+                participantData.isPrimary = false;
+                participant = new Participant(participantData);
+                
+                await participant.create();
+                message += `you have been added as an alternate for this event`;
+            
+            } else if (participant.isPrimary) {
+                eventChanged = true;
+                participant.isPrimary = false;
+                
+                await participant.update();
+                message += `you have been changed to an alternate for this event`;
+            
+            }  else {
+                message += `you are already an alternate for this event`;
+            }
+        }
+        
+        client.sendAndDelete(message, discordChannel, 5);
+        if (eventChanged) this.updateEventMessages();
+    }
+    
+    async leave(user, discordChannel) {
+        const participantQuery = {
+            guardianId: user.id,
+            eventId: this.id,
+            unique: true
+        };
+        
+        const participant = await Participant.get(participantQuery); 
+        let message = `<@${user.id}>, `;
+        let eventChanged = false;
+        
+        if (!participant) {
+            message += `you are not participating in this event`;
+        } else {
+            eventChanged = true;
+            await participant.delete();
+            message += `you have been removed from this event`;
+        }
+        
+        client.sendAndDelete(message, discordChannel, 5);
+        if (eventChanged) {
+            this.updateEventMessages();
+        }
     }
     
     // ****************************************************** //
@@ -188,7 +348,7 @@ class Event extends BaseModel {
         const ChannelGroup = require(`${ROOT}/modules/data/ChannelGroup`);
         const Message      = require(`${ROOT}/modules/data/Message`);
         
-        const eventMessageContent = await this.toMessageContent();
+        const eventMessageContent = await this.getMessageContent();
         const eventChannelName = await this.deriveChannelName();
         let   eventChannel = await Channel.get({eventId: this.id, guildId: this.guildId, unique: true});
         
@@ -238,7 +398,7 @@ class Event extends BaseModel {
                     if (!eventChannelGroup) {
                         const eventChannelGroupData = {
                             type: 'sync',
-                            name: eventChannelName,
+                            name: `${this.ufid}-${eventChannelName}`,
                             allianceId: alliance.id,
                             eventId: this.id,
                             creatorId: message.author.id
@@ -307,9 +467,14 @@ class Event extends BaseModel {
             const eventMessage = new Message(eventMessageData);
             await eventMessage.create();
             
-            await eventDiscordMessage.react(EmojiMap.get('+'));
-            await eventDiscordMessage.react(EmojiMap.get('-'));
-            await eventDiscordMessage.react(EmojiMap.get('?'));
+            const joinEmoji      = await EmojiMap.getNinkasiEmoji('join');
+            const leaveEmoji     = await EmojiMap.getNinkasiEmoji('leave');
+            const alternateEmoji = await EmojiMap.getNinkasiEmoji('alternate');
+            const emojis = [ joinEmoji, leaveEmoji, alternateEmoji ];
+            
+            for (let e = 0; e < emojis.length; e++) {
+                eventDiscordMessage.react(emojis[e]);
+            }
             
             // If we have an eventChannelGroup, loop through the channels that are
             // part of the eventConfigChannelGroup and create a channel for each one
@@ -367,6 +532,10 @@ class Event extends BaseModel {
                     
                     const linkedMessage = new Message(linkedMessageData);
                     await linkedMessage.create();
+                    
+                    for (let e = 0; e < emojis.length; e++) {
+                        linkedDiscordMessage.react(emojis[e]);
+                    }
                 }
             }
         }

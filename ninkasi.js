@@ -43,7 +43,7 @@ const init = async () => {
         client.on(eventName, event.bind(null));
     });
     
-    // Here we login the client.
+    // Here we login the client
     client.login(client.config.token);
     
     // End top-level async/await function.

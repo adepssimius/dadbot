@@ -2,6 +2,9 @@
 // Determine our place in the world
 const ROOT = '..';
 
+// Load our classes
+const Message = require(`${ROOT}/modules/data/Message`);
+    
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
 
@@ -13,4 +16,7 @@ module.exports = async () => {
     // TODO - Maybe revise this later
     //client.user.setActivity(`${client.settings.get("default").prefix}help`, {type: "PLAYING"});
     client.user.setActivity(`${client.config.prefix}help`, {type: "PLAYING"});
+    
+    // Cache the reaction messages
+    Message.loadMessageCache();
 };

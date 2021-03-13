@@ -71,7 +71,7 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
         emojiMap.set(emoji, {name: 'stop'});
         
         // Share the current state of the activity
-        message.channel.send(await context.activity.toMessageContent());
+        message.channel.send(await context.activity.getMessageContent());
         
         // Prompt for an attribute to edit
         await message.channel.send('What would you like to change?');

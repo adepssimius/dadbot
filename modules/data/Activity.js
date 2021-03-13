@@ -131,7 +131,7 @@ class Activity extends BaseModel {
         await BaseModel.prototype.delete.call(this);
     }
     
-    async toMessageContent() {
+    async getMessageContent() {
         const activityCategory = await this.getActivityCategory();
         const activityAliases  = await this.getActivityAliases();
         

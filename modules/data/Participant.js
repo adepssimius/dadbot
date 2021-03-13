@@ -53,7 +53,7 @@ class Participant extends BaseModel {
         const participant = await Participant.get({
             guardianId: this.guardianId,
             eventId: this.eventId,
-            unqiue: true
+            unique: true
         });
         
         if (participant) {
@@ -62,6 +62,14 @@ class Participant extends BaseModel {
         
         // Attempt to insert the record into the database
         await BaseModel.prototype.create.call(this);
+    }
+    
+    async update(condition = {guardian_id: this.guardianId, event_id: this.eventId}) {
+        await BaseModel.prototype.update.call(this, condition);
+    }
+    
+    async delete(condition = {guardian_id: this.guardianId, event_id: this.eventId}) {
+        await BaseModel.prototype.delete.call(this, condition);
     }
 }
 

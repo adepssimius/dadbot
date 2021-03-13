@@ -9,6 +9,12 @@ class EmojiMap {
     static map        = new Map();
     static reverseMap = new Map();
     
+    static async getNinkasiEmoji(name) {
+        const ninkasiGuild  = await client.guilds.fetch('342353140172980224');
+        const ninkasiEmojis = await ninkasiGuild.emojis.cache.array();
+        return ninkasiEmojis.find(emoji => emoji.name == name);
+    }    
+    
     static set(key, value, nextKey = null) {
         const data = {value: value, nextKey: nextKey};
         const cleansedKey = ( typeof key == 'string' ? key.trim().toLowerCase() : key );
@@ -53,7 +59,7 @@ class EmojiMap {
 }
 
 // Add some miscellaneous stuff
-
+    
 //const join  = client.emojis.cache.get('441040092203843584');
 //const leave = client.emojis.cache.get('441040091696201731');
 //const alt   = client.emojis.cache.get('441040092216426516');

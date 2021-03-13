@@ -206,6 +206,25 @@ class Message extends BaseModel {
        syncMessage.delete();
     }
     
+    static async loadMessageCache() {
+        const messageQuery = {isReactionMessage: true};
+        const messages = await Message.get(messageQuery);
+        
+        for (let m = 0; m < messages.length; m++) {
+            const message = messages[m];
+            
+            try {
+                await message.getDiscordMessage();
+            } catch (error) {
+                client.logger.error(`Error while caching message: ${message.id} (channel id = ${message.channelId})`);
+                client.logger.dump(error);
+                
+                // Clean this up since the channel is gone
+                //message.delete();
+            }
+        }
+    }
+    
     // ******************** //
     // * Instance Methods * //
     // ******************** //
@@ -230,6 +249,35 @@ class Message extends BaseModel {
         
         // And attempt to create it
         await BaseModel.prototype.create.call(this);
+    }
+    
+    async handleReaction(messageReaction, user) {
+        switch (this.reactionMessageType) {
+            case 'event': await this.handleEventReaction(messageReaction, user); break;
+            default: throw new Error(`Unrecognized reaction message type: ${this.reactionMessageType}`);
+        }
+        
+        //messageReaction.remove();
+    }
+    
+    async handleEventReaction(messageReaction, user) {
+        // Always remove the user's reaction first
+        messageReaction.users.remove(user);
+        
+        // Get the event
+        const Event = require(`${ROOT}/modules/data/Event`);
+        const event = await Event.get({id: this.eventId, unique: true});
+        
+        if (!event) {
+            throw new Error(`Unexpected could not find event: id = ${this.eventId}`);
+        }
+        
+        const discordChannel = messageReaction.message.channel;
+        switch (messageReaction.emoji.name) {
+            case 'join'      : await event.join(user, discordChannel); break;
+            case 'alternate' : await event.join(user, discordChannel, false); break;
+            case 'leave'     : await event.leave(user, discordChannel); break;
+        }
     }
 }
 

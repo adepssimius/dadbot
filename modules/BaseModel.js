@@ -220,6 +220,10 @@ class BaseModel {
         return parsedConditions;
     }
     
+    static getTableName() {
+        return this.schema.tableName;
+    }
+    
     // ******************** //
     // * Instance Methods * //
     // ******************** //
@@ -294,6 +298,10 @@ class BaseModel {
             });
     }
     
+    getTableName() {
+        return this.schema.tableName;
+    }
+    
     // ****************************** //
     // * Field Validation Functions * //
     // ****************************** //
@@ -366,6 +374,7 @@ class BaseModel {
     get platform            () { return this.getField('platform') }
     get prefix              () { return this.getField('prefix') }
     get privateEventDefault () { return this.getField('privateEventDefault') }
+    get reactionMessageType () { return this.getField('reactionMessageType') }
     get startTime           () { return this.getField('startTime') }
     get shortName           () { return this.getField('shortName') }
     get status              () { return this.getField('status') }
@@ -604,17 +613,42 @@ class BaseModel {
     // * Instance Methods - Helper methods to get related objects * //
     // ************************************************************ //
     
-    async getObjectFromSource(camelName, required = false, className = capitalize(camelName), camelId = `${camelName}Id`) {
+    async getObjectFromSource(camelName, options = {required: false}, className = capitalize(camelName), camelId = `${camelName}Id`) {
         if (!this[camelName]) {
-            const Class = require(`${ROOT}/modules/data/${className}`);
-            
             switch (camelName) {
-                case 'webhook': this[camelName] = await client.fetchWebhooks().get(this.webhookId);
-                default:        this[camelName] = await Class.get({id: this[camelId], unique: true});
+                case 'discordChannel':
+                    const Channel   = require(`${ROOT}/modules/data/Channel`);
+                    camelId = (this.getTableName() == Channel.getTableName() ? 'id' : 'channelId');
+                    this[camelName] = await client.channels.fetch(this[camelId]);
+                    break;
+                
+                case 'discordMessage':
+                    await this.getDiscordChannel(true);
+                    const Message = require(`${ROOT}/modules/data/Message`);
+                    camelId = (this.getTableName() == Message.getTableName() ? 'id' : 'messageId');
+                    this[camelName] = await this.discordChannel.messages.fetch(this[camelId]);
+                    break;
+                
+                case 'discordUser':
+                    const Participant = require(`${ROOT}/modules/data/Participant`);
+                    switch (this.getTableName()) {
+                        case Participant.getTableName(): camelId = 'guardianId'; break;
+                        default: throw new Error(`Cannot get discordUser for ${this.getTableName()}`);
+                    }
+                    this[camelName] = await client.users.fetch(this[camelId]);
+                    break;
+                
+                case 'webhook':
+                    this[camelName] = await client.fetchWebhooks().get(this.webhookId);
+                    break;
+                
+                default:
+                    const Class = require(`${ROOT}/modules/data/${className}`);
+                    this[camelName] = await Class.get({id: this[camelId], unique: true});
             }
         }
         
-        if (!this[camelName] && required) {
+        if (!this[camelName] && options.required) {
             throw new Error(`Did not find expected ${camelToSnakeCase(camelName).replace('_', ' ')}: id = ${this[camelId]}`);
         }
         
@@ -623,27 +657,30 @@ class BaseModel {
 
     // Get objects from their ultimate source (database or the Discord API)
     
-    async getActivity          (required = false) { return await this.getObjectFromSource( 'activity',          required             ); }
-    async getActivityCategory  (required = false) { return await this.getObjectFromSource( 'activityCategory',  required             ); }
-    async getAlliance          (required = false) { return await this.getObjectFromSource( 'alliance',          required             ); }
-    async getAuthor            (required = false) { return await this.getObjectFromSource( 'author',            required, 'Guardian' ); }
-    async getChannel           (required = false) { return await this.getObjectFromSource( 'channel',           required             ); }
-    async getChannelGroup      (required = false) { return await this.getObjectFromSource( 'channelGroup',      required             ); }
-    async getCreator           (required = false) { return await this.getObjectFromSource( 'creator',           required, 'Guardian' ); }
-    async getEvent             (required = false) { return await this.getObjectFromSource( 'event',             required             ); }
-    async getGuardian          (required = false) { return await this.getObjectFromSource( 'guardian',          required             ); }
-    async getGuild             (required = false) { return await this.getObjectFromSource( 'guild',             required             ); }
-    async getJoinedFromChannel (required = false) { return await this.getObjectFromSource( 'joinedFromChannel', required             ); }
-    async getJoinedFromGuild   (required = false) { return await this.getObjectFromSource( 'joinedFromGuild',   required             ); }
-    async getOrigChannel       (required = false) { return await this.getObjectFromSource( 'origChannel',       required             ); }
-    async getOrigGuild         (required = false) { return await this.getObjectFromSource( 'origGuild',         required             ); }
-    async getOrigMessage       (required = false) { return await this.getObjectFromSource( 'origMessage',       required             ); }
-    async getOwner             (required = false) { return await this.getObjectFromSource( 'owner',             required, 'Guardian' ); }
-    async getUpdater           (required = false) { return await this.getObjectFromSource( 'updater',           required             ); }
-    async getWebhook           (required = false) { return await this.getObjectFromSource( 'webhook',           required             ); }
+    async getActivity          (options = {required: false}) { return await this.getObjectFromSource( 'activity',          options             ); }
+    async getActivityCategory  (options = {required: false}) { return await this.getObjectFromSource( 'activityCategory',  options             ); }
+    async getAlliance          (options = {required: false}) { return await this.getObjectFromSource( 'alliance',          options             ); }
+    async getAuthor            (options = {required: false}) { return await this.getObjectFromSource( 'author',            options, 'Guardian' ); }
+    async getChannel           (options = {required: false}) { return await this.getObjectFromSource( 'channel',           options             ); }
+    async getChannelGroup      (options = {required: false}) { return await this.getObjectFromSource( 'channelGroup',      options             ); }
+    async getCreator           (options = {required: false}) { return await this.getObjectFromSource( 'creator',           options, 'Guardian' ); }
+    async getDiscordChannel    (options = {required: false}) { return await this.getObjectFromSource( 'discordChannel',    options             ); }
+    async getDiscordMessage    (options = {required: false}) { return await this.getObjectFromSource( 'discordMessage',    options             ); }
+    async getDiscordUser       (options = {required: false}) { return await this.getObjectFromSource( 'discordUser',       options             ); }
+    async getEvent             (options = {required: false}) { return await this.getObjectFromSource( 'event',             options             ); }
+    async getGuardian          (options = {required: false}) { return await this.getObjectFromSource( 'guardian',          options             ); }
+    async getGuild             (options = {required: false}) { return await this.getObjectFromSource( 'guild',             options             ); }
+    async getJoinedFromChannel (options = {required: false}) { return await this.getObjectFromSource( 'joinedFromChannel', options             ); }
+    async getJoinedFromGuild   (options = {required: false}) { return await this.getObjectFromSource( 'joinedFromGuild',   options             ); }
+    async getOrigChannel       (options = {required: false}) { return await this.getObjectFromSource( 'origChannel',       options             ); }
+    async getOrigGuild         (options = {required: false}) { return await this.getObjectFromSource( 'origGuild',         options             ); }
+    async getOrigMessage       (options = {required: false}) { return await this.getObjectFromSource( 'origMessage',       options             ); }
+    async getOwner             (options = {required: false}) { return await this.getObjectFromSource( 'owner',             options, 'Guardian' ); }
+    async getUpdater           (options = {required: false}) { return await this.getObjectFromSource( 'updater',           options             ); }
+    async getWebhook           (options = {required: false}) { return await this.getObjectFromSource( 'webhook',           options             ); }
     
-    async getUserFriendlyId(required = false) {
-        return await this.getObjectFromSource('userFriendlyId', required, 'UserFriendlyId', 'ufid');
+    async getUserFriendlyId(options = {required: false}) {
+        return await this.getObjectFromSource('userFriendlyId', options, 'UserFriendlyId', 'ufid');
     }
 }
 
