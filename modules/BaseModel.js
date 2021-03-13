@@ -421,6 +421,7 @@ class BaseModel {
     get channel           () { return this.getObject('channel'); }
     get channelGroup      () { return this.getObject('channelGroup'); }
     get creator           () { return this.getObject('creator'); }
+    get discordChannel    () { return this.getObject('discordChannel'); }
     get event             () { return this.getObject('event'); }
     get guardian          () { return this.getObject('guardian'); }
     get guild             () { return this.getObject('guild'); }
@@ -579,6 +580,7 @@ class BaseModel {
     set channel          (object) { this.setObject(object, 'channel'); }
     set channelGroup     (object) { this.setObject(object, 'channelGroup'); }
     set creator          (object) { this.setObject(object, 'creator'); }
+    set discordChannel   (object) { this.setObject(object, 'discordChannel'); }
     set event            (object) { this.setObject(object, 'event'); }
     set guild            (object) { this.setObject(object, 'guild'); }
     set guardian         (object) { this.setObject(object, 'guardian'); }

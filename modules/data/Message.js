@@ -59,7 +59,7 @@ class Message extends BaseModel {
         // See if we can find a sync channel for this message
         const channel = await Channel.get({
             id: message.channel.id,
-            type: 'sync',
+            isSyncChannel: true,
             unique: true
         });
         
@@ -82,7 +82,7 @@ class Message extends BaseModel {
                 type           : 'sync',
                 allianceId     : channel.allianceId,
                 channelId      : message.channel.id,
-                eventId        : channel.event_id,
+                eventId        : channel.eventId,
                 guildId        : message.guild.id,
                 channelGroupId : channel.channelGroupId,
                 isSyncMessage  : true,
@@ -106,6 +106,7 @@ class Message extends BaseModel {
                     allianceId     : channel.allianceId,
                     channelId      : linkedChannel.id,
                     channelGroupId : linkedChannel.channelGroupId,
+                    eventId        : linkedChannel.eventId,
                     guildId        : linkedChannel.guildId,
                     origChannelId  : message.channel.id,
                     origGuildId    : message.guild.id,

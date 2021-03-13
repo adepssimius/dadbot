@@ -63,9 +63,11 @@ class Channel extends BaseModel {
     // ***************** //
     
     static parseConditions(conditions) {
-        if (conditions.getLinkedChannels) {
+        const parsedConditions = conditions;
+        
+        if (parsedConditions.getLinkedChannels) {
             return (query) => {
-                query.where('channel_group_id', conditions.channelGroupId).whereNot('id', conditions.id);
+                query.where('channel_group_id', parsedConditions.channelGroupId).whereNot('id', parsedConditions.id);
             };
         }
         
@@ -122,6 +124,10 @@ class Channel extends BaseModel {
         await BaseModel.prototype.delete.call(this);
     }
     
+    // ******************************************* //
+    // * Instance Methods - Webhook Interactions * //
+    // ******************************************* //
+    
     async getWebhookName() {
         if (this.channelGroupId == null) {
             return null;
@@ -171,6 +177,107 @@ class Channel extends BaseModel {
     async deleteWebhookMessage(messageID) {
         const result = await http_delete(this.getWebhookMessageDeleteURL(messageID));
         return result;
+    }
+    
+    // ********************************** //
+    // * Instance Methods - Event Stuff * //
+    // ********************************** //
+    
+    static async createEventChannel(event, eventDetails, eventConfigDiscordChannel, eventChannelGroup) {
+        //
+        // TODO - Consider adding eventConfigChannelId to this to truly make this query unique.
+        //        Right now it only allows one channel for an event per guild. That might be a
+        //        reasonable thing. Maybe instead disallow the a guild to have more then one
+        //        channel in the same channel group. Or at least they should be in different
+        //        categories.
+        //
+        
+        const channelQuery = {
+            eventId: event.id,
+            guildId: eventConfigDiscordChannel.guild.id,
+            unique: true
+        };
+        let channel = await Channel.get(channelQuery);
+        let discordChannel;
+        
+        if (channel) {
+            discordChannel = await channel.getDiscordChannel();
+        
+        } else {
+            discordChannel = await eventConfigDiscordChannel.guild.channels.create(
+                eventDetails.channelName,
+                {
+                    type: 'text',
+                    topic: await eventDetails.channelTopic,
+                    nsfw: false,
+                    parent: eventConfigDiscordChannel.parent
+                }
+            );
+            
+            // Save the event channel to the database
+            const channelData = {
+                id: discordChannel.id,
+                type: 'event',
+                allianceId: event.allianceId,
+                guildId: eventConfigDiscordChannel.guild.id,
+                eventId: event.id,
+                isEventChannel: true
+            };
+            
+            if (eventChannelGroup) {
+                channelData.channelGroupId = eventChannelGroup.id;
+                channelData.isSyncChannel = true;
+            }
+            
+            channel = new Channel(channelData);
+            await channel.create();
+            channel.discordChannel = discordChannel;
+        }
+        
+        const messageQuery = {
+            channelId: channel.id,
+            eventId: event.id,
+            unique: true
+        };
+        
+        const Message = require(`${ROOT}/modules/data/Message`);
+        let message = await Message.get(messageQuery);
+        let discordMessage;
+        
+        if (message) {
+            discordMessage = await discordChannel.messages.fetch(message.id);
+        
+        } else {
+            discordMessage = await discordChannel.send(eventDetails.messageContent);
+            discordMessage.pin();
+            
+            // Save this message into the database
+            const messageData = {
+                id: discordMessage.id,
+                type: 'event',
+                allianceId: event.allianceId,
+                channelId: channel.id,
+                guildId: channel.guildId,
+                eventId: event.id,
+                isReactionMessage: true,
+                reactionMessageType: 'event',
+                authorId: event.creatorId
+            };
+            
+            if (eventChannelGroup) {
+                messageData.channelGroupId = eventChannelGroup.id;
+            }
+            
+            const Message = require(`${ROOT}/modules/data/Message`);
+            const message = new Message(messageData);
+            await message.create();
+        }
+        
+        for (let e = 0; e < eventDetails.emojis.length; e++) {
+            await discordMessage.react(eventDetails.emojis[e]);
+        }
+        
+        return channel;
     }
 }
 

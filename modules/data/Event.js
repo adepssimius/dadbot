@@ -342,22 +342,25 @@ class Event extends BaseModel {
     // * Instance Methods - Channel and Reaction Management * //
     // ****************************************************** //
     
-    async setupEventChannels(message) {
+    async setupEventChannels(discordMessage) {
         const Alliance     = require(`${ROOT}/modules/data/Alliance`);
         const Channel      = require(`${ROOT}/modules/data/Channel`);
         const ChannelGroup = require(`${ROOT}/modules/data/ChannelGroup`);
-        const Message      = require(`${ROOT}/modules/data/Message`);
         
-        const eventMessageContent = await this.getMessageContent();
-        const eventChannelName = await this.deriveChannelName();
-        let   eventChannel = await Channel.get({eventId: this.id, guildId: this.guildId, unique: true});
-        
-        if (eventChannel && (eventChannel.type != 'sync' || !eventChannel.isEventChannel || !eventChannel.isSyncChannel)) {
-            throw new Error(`There is already event channel in this discord clan for this event`);
-        }
+        // Put together the event details
+        const eventDetails = {
+            channelName: await this.deriveChannelName(),
+            channelTopic: await this.deriveChannelTopic(),
+            messageContent: await this.getMessageContent(),
+            emojis: [
+                await EmojiMap.getNinkasiEmoji('join'),
+                await EmojiMap.getNinkasiEmoji('leave'),
+                await EmojiMap.getNinkasiEmoji('alternate')
+            ]
+        };
         
         // Get the alliance for this guild
-        const alliance = await Alliance.get({guildId: message.guild.id, unique: true});
+        const alliance = await Alliance.get({guildId: discordMessage.guild.id, unique: true});
         let   eventConfigChannelGroup;
         let   eventChannelGroup;
         let   linkedEventConfigChannels = [];
@@ -365,7 +368,7 @@ class Event extends BaseModel {
         if (alliance) {
             // Get the event-config channel group for the message channel
             const eventConfigChannelGroupQuery = {
-                channelId: message.channel.id,
+                channelId: discordMessage.channel.id,
                 type: 'event-config',
                 allianceId: alliance.id,
                 unique: true
@@ -374,21 +377,15 @@ class Event extends BaseModel {
             
             if (eventConfigChannelGroup) {
                 const linkedEventConfigChannelsQuery = {
-                    type: 'event-config',
+                    getLinkedChannels: true,
+                    id: discordMessage.channel.id,
                     channelGroupId: eventConfigChannelGroup.id
                 };
-                const allLinkedEventConfigChannels = await Channel.get(linkedEventConfigChannelsQuery);
-                
-                for (let c = 0; c < allLinkedEventConfigChannels.length; c++) {
-                    if (allLinkedEventConfigChannels[c].id != message.channel.id) {
-                        linkedEventConfigChannels.push(allLinkedEventConfigChannels[c]);
-                    }
-                }
+                linkedEventConfigChannels = await Channel.get(linkedEventConfigChannelsQuery);
                 
                 // If we have at least one linked channel, create a sync channel group for this event
                 if (linkedEventConfigChannels.length > 0) {
                     const eventChannelGroupQuery = {
-                        type: 'sync',
                         allianceId: alliance.id,
                         eventId: this.id,
                         unique: true
@@ -398,145 +395,45 @@ class Event extends BaseModel {
                     if (!eventChannelGroup) {
                         const eventChannelGroupData = {
                             type: 'sync',
-                            name: `${this.ufid}-${eventChannelName}`,
+                            name: `${this.ufid}-${eventDetails.channelName}`,
                             allianceId: alliance.id,
                             eventId: this.id,
-                            creatorId: message.author.id
+                            creatorId: discordMessage.author.id
                         };
                         eventChannelGroup = new ChannelGroup(eventChannelGroupData);
                         await eventChannelGroup.create();
                     }
                 }
             }
-            
-            // First create the channel for the originating guild
-            let eventDiscordChannel;
-            
-            if (eventChannel) {
-                eventDiscordChannel = await client.channels.fetch(eventChannel.id);
-            } else {
-                eventDiscordChannel = await message.guild.channels.create(
-                    eventChannelName,
-                    {
-                        type: 'text',
-                        topic: await this.deriveChannelTopic(),
-                        nsfw: false,
-                        parent: message.channel.parent
-                    }
+        }
+        
+        //
+        // TODO - Have a think about whether we want to run both
+        //        createEventChannel calls asynchronously or not
+        //
+        
+        // First create the channel for the originating guild
+        Channel.createEventChannel(
+            this,
+            eventDetails,
+            discordMessage.channel, // eventConfigDiscordChannel
+            eventChannelGroup
+        );
+        
+        // If we have an eventChannelGroup, loop through the channels that are
+        // part of the eventConfigChannelGroup and create a channel for each one
+        if (eventChannelGroup && linkedEventConfigChannels.length > 0) {
+            for (let c = 0; c < linkedEventConfigChannels.length; c++) {
+                const linkedEventConfigChannel = linkedEventConfigChannels[c];
+                const linkedEventConfigDiscordChannel = await linkedEventConfigChannel.getDiscordChannel();
+                
+                // Create the channel for the linked guild
+                Channel.createEventChannel(
+                    this,
+                    eventDetails,
+                    linkedEventConfigDiscordChannel,
+                    eventChannelGroup
                 );
-                
-                // Save the event channel to the database
-                const eventChannelData = {
-                    id: eventDiscordChannel.id,
-                    type: 'sync',
-                    allianceId: alliance.id,
-                    guildId: message.guild.id,
-                    eventId: this.id,
-                    isEventChannel: true
-                };
-                
-                if (eventChannelGroup) {
-                    eventChannelData.channelGroupId = eventChannelGroup.id;
-                    eventChannelData.isSyncChannel = true;
-                }
-                
-                eventChannel = new Channel(eventChannelData);
-                await eventChannel.create();
-            }
-            
-            // Send the event info to the new channel
-            const eventDiscordMessage = await eventDiscordChannel.send(eventMessageContent);
-            
-            // Save this message into the database
-            const eventMessageData = {
-                id: eventDiscordMessage.id,
-                type: 'event',
-                allianceId: alliance.id,
-                channelId: eventDiscordChannel.id,
-                guildId: eventDiscordMessage.guild.id,
-                eventId: this.id,
-                isReactionMessage: true,
-                reactionMessageType: 'event',
-                authorId: eventDiscordMessage.author.id
-            };
-            
-            if (eventChannelGroup) {
-                eventMessageData.channelGroupId = eventChannelGroup.id;
-            }
-            
-            const eventMessage = new Message(eventMessageData);
-            await eventMessage.create();
-            
-            const joinEmoji      = await EmojiMap.getNinkasiEmoji('join');
-            const leaveEmoji     = await EmojiMap.getNinkasiEmoji('leave');
-            const alternateEmoji = await EmojiMap.getNinkasiEmoji('alternate');
-            const emojis = [ joinEmoji, leaveEmoji, alternateEmoji ];
-            
-            for (let e = 0; e < emojis.length; e++) {
-                eventDiscordMessage.react(emojis[e]);
-            }
-            
-            // If we have an eventChannelGroup, loop through the channels that are
-            // part of the eventConfigChannelGroup and create a channel for each one
-            if (eventChannelGroup) {
-                for (let c = 0; c < linkedEventConfigChannels.length; c++) {
-                    const linkedEventConfigChannel = linkedEventConfigChannels[c];
-                    const linkedEventConfigDiscordChannel = await client.channels.fetch(linkedEventConfigChannel.id); 
-                    const linkedDiscordGuild = await client.guilds.fetch(linkedEventConfigChannel.guildId);
-                    
-                    // Create the channel for the linked guild
-                    const linkedDiscordChannel = await linkedDiscordGuild.channels.create(
-                        eventChannelName,
-                        {
-                            type: 'text',
-                            topic: await this.deriveChannelTopic(),
-                            nsfw: false,
-                            parent: linkedEventConfigDiscordChannel.parent
-                        }
-                    );
-                    
-                    // Save the event channel to the database
-                    const linkedChannelData = {
-                        id: linkedDiscordChannel.id,
-                        type: 'sync',
-                        allianceId: alliance.id,
-                        guildId: linkedEventConfigChannel.guildId,
-                        channelGroupId: eventChannelGroup.id,
-                        eventId: this.id,
-                        isEventChannel: true,
-                        isSyncChannel: true
-                    };
-                    
-                    const linkedChannel = new Channel(linkedChannelData);
-                    await linkedChannel.create();
-                    
-                    // Send the event info to the new channel
-                    const linkedDiscordMessage = await linkedDiscordChannel.send(eventMessageContent);
-                    
-                    // Save this message into the database
-                    const linkedMessageData = {
-                        id: linkedDiscordMessage.id,
-                        type: 'event',
-                        allianceId: alliance.id,
-                        channelId: linkedChannel.id,
-                        guildId: linkedChannel.guildId,
-                        eventId: this.id,
-                        isReactionMessage: true,
-                        reactionMessageType: 'event',
-                        authorId: linkedDiscordMessage.author.id
-                    };
-                    
-                    if (eventChannelGroup) {
-                        linkedMessageData.channelGroupId = eventChannelGroup.id;
-                    }
-                    
-                    const linkedMessage = new Message(linkedMessageData);
-                    await linkedMessage.create();
-                    
-                    for (let e = 0; e < emojis.length; e++) {
-                        linkedDiscordMessage.react(emojis[e]);
-                    }
-                }
             }
         }
     }

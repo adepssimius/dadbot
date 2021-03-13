@@ -25,7 +25,7 @@ const help = {
     name: 'create',
     category: 'Event Coordination',
     description: 'Create a new scheduled event (lfg)',
-    usage: 'event|lfg create [<activity-name|category-name>]',
+    usage: 'event|lfg create [private] [<activity-name|category-name>]',
     minArgs: null,
     maxArgs: null
 };
@@ -54,6 +54,12 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     
     // Get our property array
     context.properties = Event.getEditableProperties(context);
+    
+    // See if it has been requested to create a private event
+    if (args.length > 0 && args[0].toLowerCase() == 'private') {
+        context.event.isPrivate = true;
+        args.shift();
+    }
     
     // Check if an activity name/alias was given as an argument
     if (args.length > 0) {
@@ -109,8 +115,12 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
             // Derive a channel name
             const channelName = await context.event.deriveChannelName();
             context.event.channelName = channelName;
-            
             await context.event.create();
+            
+            // Join the event creator
+            await context.event.join(message.author, message.channel);
+            
+            // Setup the event channels
             context.event.setupEventChannels(message);
             
             await message.channel.send(`Event created`);
