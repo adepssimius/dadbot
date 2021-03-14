@@ -113,14 +113,23 @@ class Channel extends BaseModel {
     }
     
     async delete() {
-        try {
-            const webhook = await client.fetchWebhook(this.webhookId);
-            if (webhook) await webhook.delete();
-        } catch (error) {
-            if ( !(error.name == 'DiscordAPIError' && (error.httpStatus == 404 || error.message != 'Unknown Webhook')) ) {
-                throw error;
+        // Get and delete the webhook, if it exists
+        if (this.webhookId) {
+            try {
+                const webhook = await this.getWebhook();
+                if (webhook) await webhook.delete();
+            } catch (error) {
+                if ( !(error.name == 'DiscordAPIError' && (error.httpStatus == 404 || error.message != 'Unknown Webhook')) ) {
+                    throw error;
+                }
             }
         }
+        
+        // Get and delete the discord channel
+        const discordChannel = await this.getDiscordChannel();
+        await discordChannel.delete();
+        
+        // And finally delete the actual object
         await BaseModel.prototype.delete.call(this);
     }
     

@@ -196,6 +196,33 @@ class BaseModel {
         return objects;
     }
     
+    static async delete(conditions) {
+        let parsedConditions = conditions;
+        
+        // Parse the select conditions
+        if (typeof parsedConditions == 'object') {
+            parsedConditions = this.parseConditions(parsedConditions);
+            parsedConditions = this.parseFieldConditions(parsedConditions);
+        }
+        
+        // For debugging purposes, generate the sql
+        const knex = require(`${ROOT}/modules/Database`);
+        const sql = knex(this.schema.tableName)
+            .where(parsedConditions)
+            .delete()
+            .toSQL();
+        
+        client.logger.debug(`Executing SQL: ${sql.sql}`);
+        client.logger.debug(`With Bindings: ${sql.bindings}`);
+        
+        return await knex(this.schema.tableName)
+            .where(parsedConditions)
+            .delete()
+            .then(result => {
+                return result;
+            });
+    }
+    
     static parseConditions(conditions) {
         return conditions;
     }
@@ -247,7 +274,7 @@ class BaseModel {
             });
     }
     
-    async update(condition = {id: this.id}) {
+    async update(conditions = {id: this.id}) {
         const knex = require(`${ROOT}/modules/Database`);
         
         // Update the timestamp
@@ -255,7 +282,7 @@ class BaseModel {
         
         // For debugging purposes, generate the sql
         const sql = knex(this.schema.tableName)
-            .where(condition)
+            .where(conditions)
             .update(this.data)
             .toSQL();
         
@@ -263,7 +290,7 @@ class BaseModel {
         client.logger.debug(`With Bindings: ${sql.bindings}`);
         
         const rowsChanged = await knex(this.schema.tableName)
-            .where(condition)
+            .where(conditions)
             .update(this.data)
             .then(result => {
                 return result;
@@ -278,12 +305,12 @@ class BaseModel {
         return rowsChanged;
     }
     
-    async delete(condition = {id: this.id}) {
+    async delete(conditions = {id: this.id}) {
         const knex = require(`${ROOT}/modules/Database`);
         
         // For debugging purposes, generate the sql
         const sql = knex(this.schema.tableName)
-            .where(condition)
+            .where(conditions)
             .delete()
             .toSQL();
         
@@ -291,7 +318,7 @@ class BaseModel {
         client.logger.debug(`With Bindings: ${sql.bindings}`);
         
         return await knex(this.schema.tableName)
-            .where(condition)
+            .where(conditions)
             .delete()
             .then(result => {
                 return result;
@@ -641,7 +668,7 @@ class BaseModel {
                     break;
                 
                 case 'webhook':
-                    this[camelName] = await client.fetchWebhooks().get(this.webhookId);
+                    this[camelName] = await client.fetchWebhook(this.webhookId);
                     break;
                 
                 default:

@@ -110,6 +110,27 @@ class Event extends BaseModel {
     }
     
     async delete() {
+        // Delete any participants
+        await Participant.delete({eventId: this.id});
+        
+        // Delete any messages
+        const Message = require(`${ROOT}/modules/data/Message`);
+        await Message.delete({eventId: this.id, isCloneMessage: true});
+        await Message.delete({eventId: this.id, isCloneMessage: false});
+        
+        // Delete any channels - do so individually be grabbing the objects so that we will delete the discord channels as well
+        const Channel = require(`${ROOT}/modules/data/Channel`);
+        const channels = await Channel.get({eventId: this.id});
+        
+        for (let c = 0; c < channels.length; c++) {
+            await channels[c].delete();
+        }
+        
+        // Delete channel group
+        const ChannelGroup = require(`${ROOT}/modules/data/ChannelGroup`);
+        await ChannelGroup.delete({eventId: this.id});
+        
+        // Finally, delete the actual event
         await BaseModel.prototype.delete.call(this);
     }
     
