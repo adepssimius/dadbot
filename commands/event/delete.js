@@ -21,16 +21,16 @@ const help = {
     name: 'delete',
     category: 'Event Coordination',
     description: 'Create a new scheduled event (lfg)',
-    usage: 'event|lfg delete <id>',
+    usage: 'event|lfg delete [<event-id>]',
     minArgs: 1,
-    maxArgs: null
+    maxArgs: 1
 };
 exports.help = help;
 
 const run = async (message, commandName, actionName, args) => { // eslint-disable-line no-unused-vars
     if (!client.argCountIsValid(help, args, message, commandName, actionName)) return;
     
-    const ufid = args.join(' ');
+    const ufid = args[0];
     let event = await Event.get({
         ufid: ufid,
         unique: true

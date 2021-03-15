@@ -38,7 +38,7 @@ class Event extends BaseModel {
             { dbFieldName: 'is_private',           type: 'boolean',   nullable: false },
             { dbFieldName: 'auto_delete',          type: 'boolean',   nullable: false },
             { dbFieldName: 'creator_id',           type: 'snowflake', nullable: false, refTableName: 'guardian' },
-            { dbFieldName: 'owner_id',             type: 'snowflake', nullable: false, refTableName: 'guardian' }
+            { dbFieldName: 'owner_ids',            type: 'string',    nullable: false, length: 256 }
         ]
     });
     
@@ -67,7 +67,18 @@ class Event extends BaseModel {
     // ***************** //
     
     static parseConditions(conditions) {
-        return conditions;
+        const parsedConditions = conditions;
+        
+        if (conditions.channelId) {
+            const Channel = require(`${ROOT}/modules/data/Channel`);
+            return (query) => {
+                query.whereIn('id', function() {
+                    this.select('event_id').from(Channel.getTableName()).where('id', conditions.channelId);
+                });
+            };
+        }
+        
+        return parsedConditions;
     }
     
     // ******************** //
@@ -81,12 +92,16 @@ class Event extends BaseModel {
             await this.creator.create();
         }
         
-        // Make sure the owner is in the database
-        const owner = await this.getOwner();
-        //if (await this.getOwner() == null) {
-        if (owner == null) {
-            this.owner = new Guardian({id: this.ownerId});
-            await this.owner.create();
+        // Make sure the owners are the database
+        const ownerIds = this.ownerIds;
+        const owners   = await this.getOwners();
+        
+        for (let o = 0; o < ownerIds.length; o++) {
+            let owner = owners.find(element => element.id == ownerIds[o]);
+            if (!owner) {
+                owner = new Guardian({id: ownerIds[o]});
+                await owner.create();
+            }
         }
         
         // Generate a user friendly id for this event
@@ -107,6 +122,23 @@ class Event extends BaseModel {
         // Generate id and attempt to insert the record into the database
         this.id = Snowflake.generate();
         await BaseModel.prototype.create.call(this);
+    }
+    
+    async update() {
+        // Make sure the owners are the database
+        const ownerIds = this.ownerIds;
+        const owners   = await this.getOwners();
+        
+        for (let o = 0; o < ownerIds.length; o++) {
+            let owner = owners.find(element => element.id == ownerIds[o]);
+            if (!owner) {
+                owner = new Guardian({id: ownerIds[o]});
+                await owner.create();
+            }
+        }
+        
+        // Finally, update the actual event
+        await BaseModel.prototype.update.call(this);
     }
     
     async delete() {
@@ -138,7 +170,20 @@ class Event extends BaseModel {
         const activity         = await this.getActivity();
         const activityCategory = await this.getActivityCategory();
         const creator          = await this.getCreator();
-        const owner            = await this.getOwner();
+        
+        const owners   = await this.getOwners();
+        const ownerUsernames = [];
+        
+        for (let o = 0; o < owners.length; o++) {
+            const owner = owners[o];
+            
+            if (owner) {
+                const discordUser = await owner.getDiscordUser();
+                if (discordUser) {
+                    ownerUsernames.push(discordUser.username);
+                }
+            }
+        }
         
         const startTs = new Timestamp(this.startTime);
         const startDate = startTs.formatDate();
@@ -185,7 +230,7 @@ class Event extends BaseModel {
                 ( alternateNames.length == 0 ? 'None Yet' : alternateNames.join(', ') )
             )
             .setTimestamp()
-            .setFooter(`Creator: ${creator.username} • Owner: ${owner.username}`);
+            .setFooter(`Creator: ${creator.username} • Owner${ownerUsernames.length > 1 ? 's' : ''}: ${ownerUsernames.join(', ')}`);
         
         return embed;
     }

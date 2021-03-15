@@ -273,9 +273,13 @@ client.argCountIsValid = (help, args, message, commandName, actionName) => {
     return true;
 };
 
-client.sendAndDelete = async (message, discordChannel, delaySec) => {
+client.sendAndDelete = async(message, discordChannel, delaySec = 5) => {
     const discordMessage = await discordChannel.send(message);
     setTimeout(() => { discordMessage.delete(); }, delaySec * 1000);
+};
+
+client.deleteLater = async(deletable, delaySec = 10) => {
+    setTimeout(() => {deletable.delete(); }, delaySec * 1000);
 };
 
 // Load our extra functions, though we should just move them all here

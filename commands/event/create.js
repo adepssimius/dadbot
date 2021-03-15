@@ -38,18 +38,19 @@ const run = async (message, commandName, actionName, args) => { // eslint-disabl
     const alliance = await Alliance.get({guildId: message.guild.id, unique: true});
     
     // Let's put things in context
+    const eventData = {
+        guildId: message.guild.id,
+        allianceId: (alliance ? alliance.id : null),
+        status: 'Scheduled',
+        platform: 'Stadia',
+        isPrivate: false,
+        autoDelete: false,
+        creatorId: message.author.id,
+        ownerIds: [message.author.id]
+    };
     const context = {
         create: true,
-        event: new Event({
-            guildId: message.guild.id,
-            allianceId: (alliance ? alliance.id : null),
-            status: 'Scheduled',
-            platform: 'Stadia',
-            isPrivate: false,
-            autoDelete: false,
-            creatorId: message.author.id,
-            ownerId: message.author.id
-        })
+        event: new Event(eventData)
     };
     
     // Get our property array

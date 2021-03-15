@@ -44,11 +44,12 @@ class BaseModel {
                 this[object.objectName] = data[object.objectName];
                 delete data[object.objectName];
             } else {
-                const field = this.schema.fieldMap.get(name);
+                const camelName = snakeToCamelCase(name);
+                const field = this.schema.fieldMap.get(camelName);
                 if (field) {
                     this[field.objectFieldName] = data[name];
                 } else {
-                    throw new Error(`Unrecognized field - ${name}`);
+                    throw new Error(`Unrecognized field - ${camelName}`);
                 }
             }
         }
@@ -364,6 +365,12 @@ class BaseModel {
         return this.data[snakeName];
     }
     
+    getJSONField(camelName) {
+        const snakeName = camelToSnakeCase(camelName);
+        this.validateFieldName(snakeName);
+        return JSON.parse(this.data[snakeName]);
+    }
+    
     getObject(camelName, camelId = `${camelName}Id`) {
         return this.temp[camelName];
     }
@@ -397,7 +404,6 @@ class BaseModel {
     get isSyncMessage       () { return this.getField('isSyncMessage') }
     get name                () { return this.getField('name') }
     get objectId            () { return this.getField('objectId') }
-    get ownerId             () { return this.getField('ownerId') }
     get platform            () { return this.getField('platform') }
     get prefix              () { return this.getField('prefix') }
     get privateEventDefault () { return this.getField('privateEventDefault') }
@@ -434,11 +440,14 @@ class BaseModel {
     get origChannelId       () { return this.getField('origChannelId'); }
     get origGuildId         () { return this.getField('origGuildId'); }
     get origMessageId       () { return this.getField('origMessageId'); }
-    get ownerId             () { return this.getField('ownerId'); }
     get ufid                () { return this.getField('ufid'); }
     get updaterId           () { return this.getField('updaterId'); }
     get webhookId           () { return this.getField('webhookId'); }
 
+    // JSON identifier fields
+    
+    get ownerIds            () { return this.getJSONField('ownerIds') }
+    
     // Objects
     
     get activity          () { return this.getObject('activity'); }
@@ -457,7 +466,7 @@ class BaseModel {
     get origChannel       () { return this.getObject('origChannel'); }
     get origGuild         () { return this.getObject('origGuild'); }
     get origMessage       () { return this.getObject('origMessage'); }
-    get owner             () { return this.getObject('owner'); }
+  //get owner             () { return this.getObject('owner'); }
     get updater           () { return this.getObject('updater'); }
     get userFriendlyId    () { return this.getObject('userFriendlyId'); }
     get webhook           () { return this.getObject('webhook'); }
@@ -508,6 +517,14 @@ class BaseModel {
         this.data[snakeName] = cleansedValue;
     }
     
+    setJSONField(value, camelName) {
+        const snakeName = camelToSnakeCase(camelName);
+        this.validateFieldName(snakeName);
+        
+        const jsonValue = (typeof value == 'string' ? value : JSON.stringify(value));
+        this.data[snakeName] = jsonValue;
+    }
+    
     setObject(object, camelName) {
         this.temp[camelName] = object;
     }
@@ -555,7 +572,7 @@ class BaseModel {
     set type                (value) { this.setField(value, 'type'); }
     set username            (value) { this.setField(value, 'username'); }
     set webhookUrl          (value) { this.setField(value, 'webhookUrl'); }
-
+    
     // Standard datetime fields
         
     set createdAt           (value) { this.setField(value, 'createdAt'); }
@@ -576,10 +593,13 @@ class BaseModel {
     set origChannelId       (value) { this.setField(value, 'origChannelId'); }
     set origGuildId         (value) { this.setField(value, 'origGuildId'); }
     set origMessageId       (value) { this.setField(value, 'origMessageId'); }
-    set ownerId             (value) { this.setField(value, 'ownerId'); }
     set ufid                (value) { this.setField(value, 'ufid'); }
     set updaterId           (value) { this.setField(value, 'updaterId'); }
     set webhookId           (value) { this.setField(value, 'webhookId'); }
+    
+    // JSON identifier fields
+    
+    set ownerIds            (value) { this.setJSONField(value, 'ownerIds'); }
     
     // Objects
     
@@ -614,7 +634,7 @@ class BaseModel {
     set origChannel      (object) { this.setObject(object, 'origChannel'); }
     set origGuild        (object) { this.setObject(object, 'origGuild'); }
     set origMessage      (object) { this.setObject(object, 'origMessage'); }
-    set owner            (object) { this.setObject(object, 'owner'); }
+  //set owner            (object) { this.setObject(object, 'owner'); }
     set updater          (object) { this.setObject(object, 'updater'); }
     
     set userFriendlyId(object) {
@@ -659,11 +679,15 @@ class BaseModel {
                     break;
                 
                 case 'discordUser':
+                    const Guardian    = require(`${ROOT}/modules/data/Guardian`);
                     const Participant = require(`${ROOT}/modules/data/Participant`);
+                    
                     switch (this.getTableName()) {
-                        case Participant.getTableName(): camelId = 'guardianId'; break;
+                        case    Guardian.getTableName() : camelId = 'id'; break;
+                        case Participant.getTableName() : camelId = 'guardianId'; break;
                         default: throw new Error(`Cannot get discordUser for ${this.getTableName()}`);
                     }
+                    
                     this[camelName] = await client.users.fetch(this[camelId]);
                     break;
                 
@@ -704,9 +728,21 @@ class BaseModel {
     async getOrigChannel       (options = {required: false}) { return await this.getObjectFromSource( 'origChannel',       options             ); }
     async getOrigGuild         (options = {required: false}) { return await this.getObjectFromSource( 'origGuild',         options             ); }
     async getOrigMessage       (options = {required: false}) { return await this.getObjectFromSource( 'origMessage',       options             ); }
-    async getOwner             (options = {required: false}) { return await this.getObjectFromSource( 'owner',             options, 'Guardian' ); }
     async getUpdater           (options = {required: false}) { return await this.getObjectFromSource( 'updater',           options             ); }
     async getWebhook           (options = {required: false}) { return await this.getObjectFromSource( 'webhook',           options             ); }
+    
+    async getOwners(options = {required: false}) {
+        const Guardian = require(`${ROOT}/modules/data/Guardian`);
+        const ownerIds = this.ownerIds;
+        const owners = [];
+        
+        for (let o = 0; o < ownerIds.length; o++) {
+            const owner = await Guardian.get({id: ownerIds[o], unique: true});
+            if (owner) owners.push(owner);
+        }
+        
+        return owners;
+    }
     
     async getUserFriendlyId(options = {required: false}) {
         return await this.getObjectFromSource('userFriendlyId', options, 'UserFriendlyId', 'ufid');
