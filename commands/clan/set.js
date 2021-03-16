@@ -25,7 +25,7 @@ const help = {
     name: 'info',
     category: 'Clan Administration',
     description: 'Set the value for a clan attriibute',
-    usage: 'clan set [name|alias|id|timezone] <value>',
+    usage: 'clan set [name|alias|id|timezone|admin-channel|admin-role] <value>',
     minArgs: 2,
     maxArgs: null
 };

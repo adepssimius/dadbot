@@ -246,16 +246,16 @@ class Activity extends BaseModel {
                     }
                 }; react();
                 
-                context.propertyCollector = replyMessage.createReactionCollector(async (reaction, user) => {
+                context.propertyReactionCollector = replyMessage.createReactionCollector(async (reaction, user) => {
                     return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
                 });
                 
-                context.propertyCollector.on('collect', async (reaction, user) => {
+                context.propertyReactionCollector.on('collect', async (reaction, user) => {
                     context.stopReacting = false;
                     
                     const activityCategory = emojiMap.get(reaction.emoji.name);
                     if (activityCategory) {
-                        await context.propertyCollector.stop();
+                        await context.propertyReactionCollector.stop();
                         context.activity.activityCategoryId = activityCategory.id;
                         
                         if (context.create) {
@@ -270,7 +270,7 @@ class Activity extends BaseModel {
             
             collect: async (message, nextMessage) => {
                 context.stopReacting = false;
-                context.propertyCollector.stop();
+                context.propertyReactionCollector.stop();
                 
                 const ActivityCategory = require(`${ROOT}/modules/data/ActivityCategory`);
                 const activityCategory = await ActivityCategory.get({
@@ -333,11 +333,11 @@ class Activity extends BaseModel {
                     return user.id == message.author.id && emojiMap.has(reaction.emoji.name);
                 };
                 
-                context.propertyCollector = await replyMessage.createReactionCollector(emojiFilter);
+                context.propertyReactionCollector = await replyMessage.createReactionCollector(emojiFilter);
                 
-                context.propertyCollector.on('collect', async (reaction, user) => {
+                context.propertyReactionCollector.on('collect', async (reaction, user) => {
                     context.stopReacting = false;
-                    context.propertyCollector.stop();
+                    context.propertyReactionCollector.stop();
                     
                     const fireteamSize = emojiMap.get(reaction.emoji.name);
                     if (!fireteamSize) {
@@ -359,7 +359,7 @@ class Activity extends BaseModel {
             
             collect: async (message, nextMessage) => {
                 context.stopReacting = false;
-                context.propertyCollector.stop();
+                context.propertyReactionCollector.stop();
                 
                 context.activity.fireteamSize = nextMessage.content;
                 if (context.create) properties.shift();

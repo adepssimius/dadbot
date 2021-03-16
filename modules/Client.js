@@ -3,7 +3,8 @@
 const ROOT = '..';
 
 // Load our classes
-const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
+const DuplicateError  = require(`${ROOT}/modules/error/DuplicateError`);
+const PermissionError = require(`${ROOT}/modules/error/PermissionError`);
 
 // Load our classes
 const Logger  = require(`${ROOT}/modules/Logger`);
@@ -21,6 +22,9 @@ client.logger = Logger;
 
 // Load the config
 client.config = require(`${ROOT}/config.js`);
+
+// Set the log level
+client.logger.logLevel = client.config.logLevel;
 
 // Fill the permission level map
 client.permLevelMap = new Map();
@@ -51,6 +55,11 @@ client.loadCommand = (commandName) => {
     const command = require(`${ROOT}/commands/${commandName}`);
     if (command.init) {
         command.init(client);
+    }
+    
+    // Add purge to the conf if it does not exist
+    if (!command.conf.purge) {
+        command.conf.purge = {onSuccess: false, onFail: false};
     }
     
     // Add actions and action aliases Collection
@@ -123,136 +132,123 @@ client.loadCommandAction = (command, actionName) => {
     return false;
 };
 
-//
-// TODO - Consider creating client.runCommand() and moving code from message event into here
-//
-
-client.runCommand = async (message) => {
-    const args = message.content.slice(client.config.prefix.length).trim().split(/ +/g);
+client.runCommand = async (discordMessage) => {
+    const args = discordMessage.content.slice(client.config.prefix.length).trim().split(/ +/g);
     const commandName = args.shift().toLowerCase();
+    let failure;
     
     // If the member on a guild is invisible or not cached, fetch them.
-    if (message.guild && !message.member) {
-        await message.guild.members.fetch(message.author);
+    if (discordMessage.guild && !discordMessage.member) {
+        await discordMessage.guild.members.fetch(discordMessage.author);
     }
     
     // Check whether the command or alias exists
     const command = client.commands.get(commandName) || client.commands.get(client.commandAliases.get(commandName));
     if (!command) {
-        message.reply(`Unrecognized command: ${client.config.prefix}${commandName}`);
-        return;
+        failure = `unrecognized command: ${client.config.prefix}${commandName}`;
+    
+    // Some commands are not be useable in DMs
+    } else if (command.conf.guildOnly && !discordMessage.guild) {
+        failure = 'this command is unavailable via private message. Please run this command in a Discord server channel.';
+    
+    } else {
+        try {
+            const hasPermLevel = await client.checkPermLevel(discordMessage, command.conf.permLevel);
+            
+            if (hasPermLevel) {
+                client.logger.cmd(`[CMD] ${discordMessage.author.username} (${discordMessage.author.id}) executed command: ${colorizeCommand(command.help.name)} ${args.join(' ')}`);
+                command.run(discordMessage, commandName, args);
+            } else {
+                failure = `you do not have permission to use this command`;
+            }
+        } catch (error) {
+            client.logger.error(error);
+            failure = 'there was an error trying to execute that command!';
+        }
     }
     
-    // Some commands may not be useable in DMs
-    if (command && !message.guild && command.conf.guildOnly) {
-        return message.reply('This command is unavailable via private message. Please run this command in a Discord server channel.');
-    }
-    
-    if (!client.checkPermLevel(message, command.conf.permLevel)) {
-        return message.reply(`You do not have permission to use this command.`);
-    }
-    
-    client.logger.cmd(`[CMD] ${message.author.username} (${message.author.id}) executed command: ${colorizeCommand(command.help.name)} ${args.join(' ')}`);
-    
-    try {
-        command.run(message, commandName, args);
-    } catch (error) {
-        console.error(error);
-        message.reply('There was an error trying to execute that command!');
+    if (failure) {
+        client.replyWithPurge(failure, discordMessage, {purge: command.conf.purge, success: false});
     }
 };
 
-client.runCommandAction = async (message, command, commandName, actionName, args) => {
-    //
-    // TODO - Add handling for unrecognized command actions (and make sure we have it for commands as well)
-    //
+client.runCommandAction = async (discordMessage, command, commandName, actionName, args) => {
+    let failure;
     
     const action  = command.actions.get(actionName) || command.actions.get(command.actionAliases.get(actionName));
     if (!action) {
-        message.reply(`Unrecognized command action: ${client.config.prefix}${commandName} ${actionName}`);
-        return;
+        failure = `unrecognized command action: ${client.config.prefix}${commandName} ${actionName}`;
+    
+    // Some commands are not be useable in DMs
+    } else if (action.conf.guildOnly && !discordMessage.guild) {
+        failure = 'this command action is unavailable via private message. Please run this command in a Discord server channel.';
+    
+    } else {
+        try {
+            const hasPermLevel = await client.checkPermLevel(discordMessage, action.conf.permLevel);
+            if (hasPermLevel) {
+                client.logger.cmd(`[CMD] ${discordMessage.author.username} (${discordMessage.author.id}) executed action: ${colorizeCommand(command.help.name)} ${colorizeAction(action.help.name)} ${args.join(' ')}`);
+                action.run(discordMessage, commandName, actionName, args);
+            } else {
+                failure = `you do not have permission to use this command`;
+            }
+            
+        } catch (error) {
+            console.error(error);
+            failure = `there was an error trying to execute that command action!`;
+        }
     }
     
-    // Some commands may not be useable in DMs
-    if (action  && !message.guild && action.conf.guildOnly) {
-        return message.reply('This command action is unavailable via private message. Please run this command in a Discord server channel.');
+    if (failure) {
+        client.replyWithPurge(failure, discordMessage, {purge: action.conf.purge, success: false});
     }
-    
-    if (!client.checkPermLevel(message, action.conf.permLevel)) {
-        return message.reply(`You do not have permission to use this command.`);
-    }
-    
-    client.logger.cmd(`[CMD] ${message.author.username} (${message.author.id}) executed action: ${colorizeCommand(command.help.name)} ${colorizeAction(action.help.name)} ${args.join(' ')}`);
-    
-    try {
-        action.run(message, commandName, actionName, args);
-    } catch (error) {
-        console.error(error);
-        message.reply('There was an error trying to execute that command action!');
-    }
-
 };
 
-/*
- * PERMISSION LEVEL FUNCTION
- * This is a very basic permission system for commands which uses "levels"
- * "spaces" are intentionally left black so you can add them if you want.
- * NEVER GIVE ANYONE BUT OWNER THE LEVEL 10! By default this can run any
- * command including the VERY DANGEROUS `eval` and `exec` commands!
- */
-//client.permlevel = (message) => {
-//    let permlevel = 0;
-//    
-//    const permOrder = client.config.permLevels.slice(0).sort((p, c) => p.level < c.level ? 1 : -1);
-//    while (permOrder.length) {
-//        const currentLevel = permOrder.shift();
-//        if (message.guild && currentLevel.guildOnly) {
-//            continue;
-//        }
-//        
-//        if (currentLevel.check(message)) {
-//            permlevel = currentLevel.level;
-//            break;
-//        }
-//    }
-//    
-//    return permlevel;
-//};
-
-client.checkPermLevel = (message, permLevelName) => {
-    // If this command or action does not have a permission level name, let everyone have at it
-    if (permLevelName == null) {
+client.checkPermLevel = async (message, permLevel) => {
+    // If this command/action does not have a permission level, let everyone have at it
+    if (!permLevel) {
         return true;
     }
     
-    // Attempt to get the permission level
-    const permLevel = client.permLevelMap.get(permLevelName);
-    
-    // If we did not find it, something is broken
-    if (permLevel == null) {
-        client.logger.error('Permission level not found');
-        return false;
+    // Look for invalid permission levels
+    if (/^[\w]+-[\w]+$/.test(permLevel)) {
+        // Parse the permission level
+        const permLevelParts = permLevel.split('-');
+        const permType = permLevelParts[0];
+        const permRole = permLevelParts[1];
+        
+        // Check the various permission types
+        switch (permType) {
+            case 'bot':
+                return await client.checkBotPermLevel(message, permLevel, permRole);
+            
+            case 'alliance':
+                const Alliance = require(`${ROOT}/modules/data/Alliance`);
+                return await Alliance.checkPermLevel(message, permLevel, permRole);
+            
+            case 'guild':
+                const Guild = require(`${ROOT}/modules/data/Guild`);
+                return await Guild.checkPermLevel(message, permLevel, permRole);
+        }
     }
     
-    // Otherwise, finally check the permission level
-    return permLevel.check(message);
+    throw new PermissionError(`Invalid permission level: ${permLevel}`);
 };
 
-client.replyWithError = async (oops, message) => {
-    message.channel.send(`**ERROR**: ${oops}`);
+client.checkBotPermLevel = async (message, permLevel, permRole) => {
+    switch (permRole) {
+        case 'owner': return await client.userHasRole(message.member, client.config.botOwnerRoleId);
+        case 'admin': return await client.userHasRole(message.member, client.config.botAdminRoleId);
+    }
+    
+    throw new PermissionError(`Invalid permission level: ${permLevel}`);
 };
 
-client.replyWithErrorAndDM = async (oops, message, error) => {
-    message.channel.send(`**ERROR**: ${oops}`);
+client.userHasRole = async (discordGuildMember, roleId) => {
+    //const role = await discordGuildMember.roles.find(r => r.id == roleId);
+    //return (role != undefined);
     
-    //await message.author.send(`**ERROR**: ${oops}`);
-    //await message.author.send(error.message);
-    //await message.author.send(error.stack);
-    
-    message.author.send(`**ERROR**: ${oops}\n` + '```' + error.message + '```');
-    
-    client.logger.error(oops);
-    client.logger.dump(error);
+    return await discordGuildMember.roles.cache.has(roleId);
 };
 
 client.usage = (help, commandName, actionName) => {
@@ -271,6 +267,53 @@ client.argCountIsValid = (help, args, message, commandName, actionName) => {
     }
     
     return true;
+};
+
+//
+// Messaging functions
+//
+
+//client.augmentDiscordMessage = (discordMessage) => {
+//    Object.defineProperty(discordMessage, 'replyWithPurge', {
+//        value: client.replyWithPurge,
+//        enumerable: false // it's already the default
+//    });
+//    console.log(discordMessage);
+//};
+
+client.replyWithPurge = async (messageContent, discordMessage, args) => {
+    const success = (args.success != undefined ? args.success : true);
+    const purge   = (args.purge   != undefined ? args.purge : {onSuccess: false, onFail: false});
+    
+    if (purge.onSuccess == undefined) purge.onSuccess = false;
+    if (purge.onFail    == undefined) purge.onFail = false;
+    
+    const responseDiscordMessage = await discordMessage.reply(messageContent);
+    
+    if ( (success && purge.onSuccess) || (!success && purge.onFail) ) {
+        const delaySec = ( success ? purge.onSuccess : purge.onFail );
+        setTimeout(() => {
+            discordMessage.delete();
+            responseDiscordMessage.delete();
+        }, delaySec * 1000);
+    }
+};
+
+client.replyWithError = async (oops, message) => {
+    message.channel.send(`**ERROR**: ${oops}`);
+};
+
+client.replyWithErrorAndDM = async (oops, message, error) => {
+    message.channel.send(`**ERROR**: ${oops}`);
+    
+    //await message.author.send(`**ERROR**: ${oops}`);
+    //await message.author.send(error.message);
+    //await message.author.send(error.stack);
+    
+    message.author.send(`**ERROR**: ${oops}\n` + '```' + error.message + '```');
+    
+    client.logger.error(oops);
+    client.logger.dump(error);
 };
 
 client.sendAndDelete = async(message, discordChannel, delaySec = 5) => {

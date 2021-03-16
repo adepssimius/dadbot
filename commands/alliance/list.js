@@ -12,7 +12,8 @@ const conf = {
     enabled: true,
     guildOnly: false,
     aliases: [],
-    permLevel: null
+    permLevel: 'bot-admin',
+    purge: { onFail: 10 }
 };
 exports.conf = conf;
 

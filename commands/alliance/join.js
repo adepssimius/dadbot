@@ -14,7 +14,7 @@ const conf = {
     enabled: true,
     guildOnly: false,
     aliases: [],
-    permLevel: null
+    permLevel: 'clan-admin'
 };
 exports.conf = conf;
 

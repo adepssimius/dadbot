@@ -13,7 +13,7 @@ const conf = {
     enabled: true,
     guildOnly: false,
     aliases: ['del'],
-    permLevel: 'admin'
+    permLevel: 'alliance-admin'
 };
 exports.conf = conf;
 

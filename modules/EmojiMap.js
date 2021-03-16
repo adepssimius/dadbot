@@ -64,7 +64,7 @@ class EmojiMap {
 //const leave = client.emojis.cache.get('441040091696201731');
 //const alt   = client.emojis.cache.get('441040092216426516');
 
-//EmojiMap.set(':x:', '❌');
+EmojiMap.set(':x:', '❌');
 //EmojiMap.set(':+:', '');
 //EmojiMap.set(':-:', '');
 //EmojiMap.set(':?:', '');

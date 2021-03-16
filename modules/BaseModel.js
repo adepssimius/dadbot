@@ -169,8 +169,8 @@ class BaseModel {
             .select()
             .toSQL();
         
-        client.logger.debug(`Executing SQL: ${sql.sql}`);
-        client.logger.debug(`With Bindings: ${sql.bindings}`);
+        client.logger.sql(`Executing SQL: ${sql.sql}`);
+        client.logger.sql(`With Bindings: ${sql.bindings}`);
         
         // Execute the select and gather the results
         const rows = await knex(this.schema.tableName)
@@ -213,8 +213,8 @@ class BaseModel {
             .delete()
             .toSQL();
         
-        client.logger.debug(`Executing SQL: ${sql.sql}`);
-        client.logger.debug(`With Bindings: ${sql.bindings}`);
+        client.logger.sql(`Executing SQL: ${sql.sql}`);
+        client.logger.sql(`With Bindings: ${sql.bindings}`);
         
         return await knex(this.schema.tableName)
             .where(parsedConditions)
@@ -264,8 +264,8 @@ class BaseModel {
             .insert(this.data)
             .toSQL();
         
-        client.logger.debug(`Executing SQL: ${sql.sql}`);
-        client.logger.debug(`With Bindings: ${sql.bindings}`);
+        client.logger.sql(`Executing SQL: ${sql.sql}`);
+        client.logger.sql(`With Bindings: ${sql.bindings}`);
         
         // Execute the insert
         return await knex(this.schema.tableName)
@@ -287,8 +287,8 @@ class BaseModel {
             .update(this.data)
             .toSQL();
         
-        client.logger.debug(`Executing SQL: ${sql.sql}`);
-        client.logger.debug(`With Bindings: ${sql.bindings}`);
+        client.logger.sql(`Executing SQL: ${sql.sql}`);
+        client.logger.sql(`With Bindings: ${sql.bindings}`);
         
         const rowsChanged = await knex(this.schema.tableName)
             .where(conditions)
@@ -315,8 +315,8 @@ class BaseModel {
             .delete()
             .toSQL();
         
-        client.logger.debug(`Executing SQL: ${sql.sql}`);
-        client.logger.debug(`With Bindings: ${sql.bindings}`);
+        client.logger.sql(`Executing SQL: ${sql.sql}`);
+        client.logger.sql(`With Bindings: ${sql.bindings}`);
         
         return await knex(this.schema.tableName)
             .where(conditions)
@@ -416,6 +416,7 @@ class BaseModel {
     get type                () { return this.getField('type') }
     get ufid                () { return this.getField('ufid') }
     get username            () { return this.getField('username') }
+    get value               () { return this.getField('value') }
     get webhookUrl          () { return this.getField('webhookUrl') }
     
     // Standard datetime fields
@@ -571,6 +572,7 @@ class BaseModel {
     set timezone            (value) { this.setField(value, 'timezone'); }
     set type                (value) { this.setField(value, 'type'); }
     set username            (value) { this.setField(value, 'username'); }
+    set value               (value) { this.setField(value, 'value'); }
     set webhookUrl          (value) { this.setField(value, 'webhookUrl'); }
     
     // Standard datetime fields
@@ -728,7 +730,7 @@ class BaseModel {
     async getOrigChannel       (options = {required: false}) { return await this.getObjectFromSource( 'origChannel',       options             ); }
     async getOrigGuild         (options = {required: false}) { return await this.getObjectFromSource( 'origGuild',         options             ); }
     async getOrigMessage       (options = {required: false}) { return await this.getObjectFromSource( 'origMessage',       options             ); }
-    async getUpdater           (options = {required: false}) { return await this.getObjectFromSource( 'updater',           options             ); }
+    async getUpdater           (options = {required: false}) { return await this.getObjectFromSource( 'updater',           options, 'Guardian' ); }
     async getWebhook           (options = {required: false}) { return await this.getObjectFromSource( 'webhook',           options             ); }
     
     async getOwners(options = {required: false}) {

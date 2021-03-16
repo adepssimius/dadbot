@@ -9,7 +9,8 @@ const conf = {
     enabled: true,
     guildOnly: false,
     aliases: ['all'],
-    permLevel: 'viewer'
+    permLevel: null,
+    purge: { onFail: 10 }
 };
 exports.conf = conf;
 

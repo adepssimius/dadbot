@@ -3,10 +3,11 @@
 const ROOT = '../..';
 
 // Load our classes
-const BaseModel      = require(`${ROOT}/modules/BaseModel`);
-const Snowflake      = require(`${ROOT}/modules/Snowflake`);
-const Guardian       = require(`${ROOT}/modules/data/Guardian`);
-const DuplicateError = require(`${ROOT}/modules/error/DuplicateError`);
+const BaseModel       = require(`${ROOT}/modules/BaseModel`);
+const Snowflake       = require(`${ROOT}/modules/Snowflake`);
+const Guardian        = require(`${ROOT}/modules/data/Guardian`);
+const DuplicateError  = require(`${ROOT}/modules/error/DuplicateError`);
+const PermissionError = require(`${ROOT}/modules/error/PermissionError`);
 
 // Load singletons
 const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unused-vars
@@ -44,6 +45,15 @@ class Alliance extends BaseModel {
     // ***************** //
     // * Class Methods * //
     // ***************** //
+    
+    static checkPermLevel(message, permLevel, permRole) {
+        switch (permRole) {
+            case 'owner': return false;
+            case 'admin': return false;
+        }
+        
+        throw new PermissionError(`Invalid permission level: ${permLevel}`);
+    }
     
     static parseConditions(conditions) {
         // Check for a name or short name search

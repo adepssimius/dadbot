@@ -10,25 +10,28 @@ const client = require(`${ROOT}/modules/Client`); // eslint-disable-line no-unus
 
 // Emitted whenever a message is created.
 
-module.exports = async (message) => {
+module.exports = async (discordMessage) => {
     // Ignore messages from the bot
-    if (message.author.bot) return;
+    if (discordMessage.author.bot) return;
     
     client.logger.debug('Incoming Message');
-    client.logger.dump(message);
+    client.logger.dump(discordMessage);
+    
+    // Augment the discord message
+    //client.augmentDiscordMessage(discordMessage);
     
     // If we find the prefix, attempt to process the command
-    if (message.content.startsWith(client.config.prefix)) {
+    if (discordMessage.content.startsWith(client.config.prefix)) {
         //if (channel != null) {
         //    message.channel.send('Commands not accepted within a synchronization channel');
         //} else {
         //    client.runCommand(message);
         //}
         
-        client.runCommand(message);
+        client.runCommand(discordMessage);
         return;
     }
     
     // Otherwise attempt to synchronize this message
-    Message.sync(message);
+    Message.sync(discordMessage);
 };

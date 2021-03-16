@@ -3,8 +3,8 @@
 const ROOT = '../..';
 
 // Load our classes
-const Activity = require(`${ROOT}/modules/data/Activity`);
 const EmojiMap = require(`${ROOT}/modules/EmojiMap`);
+const Activity = require(`${ROOT}/modules/data/Activity`);
 
 // Load external classes
 const Discord = require('discord.js');

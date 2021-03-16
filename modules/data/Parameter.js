@@ -35,7 +35,17 @@ class Parameter extends BaseModel {
     // * Getters * //
     // *********** //
     
-    // No custom getters required
+    get title() {
+        let titleSpecifierParts = [`type: ${this.type}`];
+        
+        if (this.type == 'alliance') {
+            titleSpecifierParts.push(`alliance id: ${this.allianceId ? this.allianceId : 'null'}`);
+        } else  if (this.type == 'alliance') {
+            titleSpecifierParts.push(`guild id: ${this.guildId ? this.guildId : 'null'}`);
+        }
+        
+        return `${this.name} [${titleSpecifierParts.join(', ')}]`;
+    }
     
     // *********** //
     // * Setters * //
@@ -62,24 +72,28 @@ class Parameter extends BaseModel {
             unique: true
         };
         
-        if (this.allianceId) {
+        if (this.type == 'alliance' && this.allianceId) {
             duplicateQuery.allianceId = this.allianceId;
         }
         
-        // Check if this is a duplicate alliance parameter
+        if (this.type == 'guild' && this.guildId) {
+            duplicateQuery.guildId = this.guildId;
+        }
+        
+        // Check if this is a duplicate parameter
         const parameter = await Parameter.get(duplicateQuery);
         if (parameter) {
-            throw new DuplicateError(`Duplicate parameter found with the same name: ${this.name}${(this.allianceId ? ` [alliance id = ${this.allianceId}]` : '')}`);
+            throw new DuplicateError(`Duplicate parameter found with the same name: ${this.title}`);
         }
         
         // Make sure the creator is in the database
-        if (await this.getCreator() == null) {
+        if ( !(await this.getCreator()) ) {
             this.creator = new Guardian({id: this.creatorId});
             await this.creator.create();
         }
         
         // Make sure the updater is in the database
-        if (await this.getUpdater() == null) {
+        if ( !(await this.getUpdater()) ) {
             this.updater = new Guardian({id: this.updaterId});
             await this.updater.create();
         }
@@ -90,6 +104,12 @@ class Parameter extends BaseModel {
     }
     
     async update() {
+        // Check if this is a new object
+        if (!this.id) {
+            await this.create();
+            return;
+        }
+        
         // Make sure the updater is in the database
         if (await this.getUpdater() == null) {
             this.updater = new Guardian({id: this.updaterId});
